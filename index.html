@@ -3,521 +3,227 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Nebula OS - Win11 Style</title>
+    <title>Nebula OS - Explorer Pro</title>
     <style>
-        /* --- 核心變數 --- */
         :root {
-            --bg-gradient: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-            --glass-bg: rgba(255, 255, 255, 0.08);
-            --glass-border: 1px solid rgba(255, 255, 255, 0.15);
-            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-            --neon-blue: #00f3ff;
-            --neon-purple: #bc13fe;
-            --text-main: #ffffff;
-            --font-ui: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            --bg-main: #001220;
+            --glass: rgba(255, 255, 255, 0.08);
+            --glass-thick: rgba(20, 20, 25, 0.85);
+            --border: 1px solid rgba(255, 255, 255, 0.15);
+            --accent: #00a2ff;
+            --text: #ffffff;
+            --text-dim: #b0b0b0;
         }
 
-        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
-        
-        body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%;
-            font-family: var(--font-ui);
-            overflow: hidden;
-            background: var(--bg-gradient);
-            background-size: 400% 400%;
-            animation: gradientBG 20s ease infinite;
-            color: var(--text-main);
-        }
+        * { box-sizing: border-box; font-family: 'Segoe UI', system-ui; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: var(--bg-main); color: var(--text); }
 
-        @keyframes gradientBG {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
+        /* 動態背景 */
+        #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; 
+            background: linear-gradient(45deg, #0f0c29, #302b63, #24243e); background-size: 400% 400%; animation: grad 15s infinite; }
+        @keyframes grad { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
 
-        /* --- 1. Windows 11 風格鎖定/歡迎畫面 --- */
-        #lock-screen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.1); /* 輕微遮罩，透出背景 */
-            backdrop-filter: blur(5px);
-            z-index: 2000;
-            display: flex; flex-direction: column; align-items: center;
-            padding-top: 15vh;
-            transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s;
-            cursor: pointer;
-        }
+        /* --- 鎖定與登入介面 --- */
+        .full-screen-overlay { position: fixed; inset: 0; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(20px); transition: 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+        .hidden { transform: translateY(-100%); opacity: 0; pointer-events: none; }
+        .clock { font-size: 80px; font-weight: 200; margin-bottom: 10px; }
 
-        #lock-screen.slide-up {
-            transform: translateY(-100%);
-            opacity: 0;
-            pointer-events: none;
+        /* --- 視窗通用樣式 --- */
+        .window {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
+            width: 80%; height: 75%; background: var(--glass-thick); backdrop-filter: blur(30px);
+            border: var(--border); border-radius: 12px; display: none; flex-direction: column;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5); z-index: 100; transition: 0.3s cubic-bezier(0.19, 1, 0.22, 1);
         }
+        .window.active { display: flex; transform: translate(-50%, -50%) scale(1); }
+        .win-header { height: 45px; display: flex; align-items: center; padding: 0 15px; border-bottom: var(--border); cursor: move; }
+        .win-ctrl { display: flex; gap: 8px; margin-left: auto; }
+        .ctrl-dot { width: 12px; height: 12px; border-radius: 50%; cursor: pointer; }
 
-        .lock-time { font-size: 5rem; font-weight: 200; letter-spacing: -2px; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
-        .lock-date { font-size: 1.5rem; font-weight: 400; margin-top: 10px; }
-        .lock-hint {
-            position: absolute; bottom: 50px;
-            font-size: 1rem; opacity: 0.8;
-            animation: bounce 2s infinite;
-        }
+        /* --- 檔案總管專屬 --- */
+        .explorer-main { flex: 1; display: flex; overflow: hidden; }
+        .sidebar { width: 200px; border-right: var(--border); padding: 15px; background: rgba(0,0,0,0.2); }
+        .side-item { padding: 8px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 5px; font-size: 14px; }
+        .side-item:hover { background: var(--glass); }
+        .side-item.active { background: var(--glass); border-left: 3px solid var(--accent); }
 
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
-            40% {transform: translateY(-10px);}
-            60% {transform: translateY(-5px);}
-        }
-
-        /* --- 通用 UI 元件 --- */
-        .glass-panel {
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: var(--glass-border);
-            box-shadow: var(--glass-shadow);
-            border-radius: 12px;
-        }
-
-        .btn {
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
-            color: white; padding: 10px 20px;
-            border-radius: 6px; cursor: pointer;
-            transition: all 0.2s; font-size: 0.95rem; outline: none;
-        }
-        .btn:hover { background: rgba(255,255,255,0.25); border-color: var(--neon-blue); }
-        .btn:active { transform: scale(0.96); }
-        .btn-primary { background: var(--neon-blue); color: #000; border: none; font-weight: bold; }
-        .btn-primary:hover { background: #5cf7ff; box-shadow: 0 0 15px var(--neon-blue); }
-
-        input {
-            background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1);
-            padding: 12px; border-radius: 6px; color: white; width: 100%;
-            margin-bottom: 15px; outline: none; transition: 0.3s;
-        }
-        input:focus { border-color: var(--neon-blue); background: rgba(0,0,0,0.6); }
-
-        /* --- 登入畫面 --- */
-        #auth-screen {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            display: flex; justify-content: center; align-items: center;
-            z-index: 1000;
-            opacity: 0; transition: opacity 1s 0.5s; /* 延遲顯示，等鎖定畫面滑上去 */
-            pointer-events: none;
-        }
-        #auth-screen.visible { opacity: 1; pointer-events: all; }
-
-        .auth-box { width: 360px; padding: 40px; text-align: center; }
-        .user-avatar {
-            width: 80px; height: 80px; background: #ddd; border-radius: 50%;
-            margin: 0 auto 20px; border: 3px solid rgba(255,255,255,0.3);
-            background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-
-        /* --- 桌面環境 --- */
-        #desktop {
-            display: none; width: 100%; height: 100%; position: relative;
-        }
-
-        .desktop-icons {
-            padding: 20px; display: flex; flex-direction: column; flex-wrap: wrap; height: 90%; align-content: flex-start; gap: 10px;
-        }
-
-        .icon {
-            width: 80px; padding: 10px; border-radius: 8px;
-            display: flex; flex-direction: column; align-items: center;
-            cursor: pointer; transition: 0.2s; text-align: center;
-        }
-        .icon:hover { background: rgba(255,255,255,0.15); }
-        .icon-img {
-            width: 48px; height: 48px; border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 24px; margin-bottom: 5px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            background: linear-gradient(135deg, #4facfe, #00f2fe);
-        }
-        .icon-text { font-size: 0.8rem; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8); line-height: 1.2; }
+        .file-view { flex: 1; padding: 0; overflow-y: auto; display: flex; flex-direction: column; }
+        .file-table-header { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; padding: 10px 20px; border-bottom: var(--border); font-size: 12px; color: var(--text-dim); }
+        .file-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; padding: 12px 20px; font-size: 14px; border-bottom: rgba(255,255,255,0.05) 1px solid; cursor: pointer; transition: 0.2s; }
+        .file-row:hover { background: var(--glass); }
+        .file-info { display: flex; align-items: center; gap: 10px; }
+        .file-icon { font-size: 20px; }
 
         /* --- 工作列 --- */
-        .taskbar {
-            position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
-            width: 90%; max-width: 600px; height: 50px;
-            display: flex; align-items: center; justify-content: center; gap: 15px;
-            z-index: 900; border-radius: 12px;
-        }
+        .taskbar { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); width: auto; padding: 5px 15px; height: 55px; background: var(--glass); backdrop-filter: blur(15px); border: var(--border); border-radius: 15px; display: flex; align-items: center; gap: 15px; z-index: 900; }
+        .task-icon { width: 40px; height: 40px; border-radius: 8px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+        .task-icon:hover { background: var(--glass); transform: translateY(-3px); }
 
-        /* --- IDE 視窗 --- */
-        #ide-window {
-            position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%) scale(0.95);
-            width: 90%; height: 85%;
-            display: flex; flex-direction: column;
-            opacity: 0; pointer-events: none; transition: 0.3s cubic-bezier(0.19, 1, 0.22, 1);
-            z-index: 100;
-        }
-        #ide-window.open { opacity: 1; pointer-events: all; transform: translate(-50%, -50%) scale(1); }
-        #ide-window.fullscreen { width: 100%; height: 100%; top:0; left:0; transform: none; border-radius: 0; border: none; }
-
-        .ide-toolbar { height: 45px; display: flex; align-items: center; padding: 0 10px; border-bottom: var(--glass-border); gap: 10px; }
-        .ide-body { flex: 1; display: flex; overflow: hidden; position: relative; }
+        /* 通用按鈕 */
+        .btn { background: var(--accent); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; }
+        .btn:hover { filter: brightness(1.2); }
         
-        .editor-pane { flex: 1; display: flex; flex-direction: column; background: rgba(30,30,30,0.6); }
-        .editor-tabs { display: flex; background: rgba(0,0,0,0.3); }
-        .tab { padding: 8px 15px; cursor: pointer; font-size: 0.8rem; color: #aaa; border-right: 1px solid rgba(255,255,255,0.05); }
-        .tab.active { background: rgba(255,255,255,0.05); color: var(--neon-blue); border-top: 2px solid var(--neon-blue); }
-        
-        .code-area {
-            flex: 1; width: 100%; background: transparent; border: none;
-            color: #d4d4d4; padding: 15px; font-family: 'Consolas', monospace; font-size: 14px;
-            resize: none; outline: none; line-height: 1.5;
-        }
-
-        .preview-pane { flex: 1; background: white; border-left: var(--glass-border); }
-        iframe { width: 100%; height: 100%; border: none; pointer-events: none; } /* 預設 pointer-events none 防止拖拉被吃 */
-        .preview-pane:hover iframe { pointer-events: auto; }
-
-        /* 通知 Toast */
-        .toast {
-            position: fixed; bottom: 80px; right: 20px;
-            background: rgba(30, 30, 30, 0.9); border-left: 4px solid var(--neon-blue);
-            color: white; padding: 15px 25px; border-radius: 4px;
-            transform: translateX(150%); transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
-            z-index: 3000; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-        }
-        .toast.show { transform: translateX(0); }
-
-        /* 隱藏的 Input 用於上傳 */
-        #upload-input { display: none; }
-
+        #toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; opacity: 0; transition: 0.3s; z-index: 3000; }
     </style>
 </head>
 <body>
 
-    <div id="lock-screen" onclick="app.unlockSystem()">
-        <div class="lock-time" id="clock-time">12:00</div>
-        <div class="lock-date" id="clock-date">1月1日 星期一</div>
-        <div class="lock-hint">點擊或滑動以解鎖</div>
+    <div id="bg-canvas"></div>
+
+    <div id="lock-screen" class="full-screen-overlay" onclick="ui.unlock()">
+        <div class="clock" id="lock-time">00:00</div>
+        <div id="lock-date">2月15日 星期日</div>
+        <p style="margin-top: 50px; opacity: 0.6;">點擊以進入系統</p>
     </div>
 
-    <div id="auth-screen">
-        <div class="glass-panel auth-box">
-            <div class="user-avatar"></div>
-            <h2 id="auth-title">歡迎回來</h2>
-            
-            <div id="login-form">
-                <input type="text" id="login-user" placeholder="使用者名稱">
-                <input type="password" id="login-pass" placeholder="密碼">
-                <button class="btn btn-primary" style="width:100%" onclick="app.login()">登入 →</button>
-                <p style="font-size: 0.8rem; margin-top: 15px; cursor: pointer; opacity:0.7" onclick="app.toggleAuthMode()">沒有帳號？建立新帳戶</p>
-            </div>
-
-            <div id="register-form" style="display:none;">
-                <input type="text" id="reg-user" placeholder="設定使用者名稱">
-                <input type="password" id="reg-pass" placeholder="設定密碼">
-                <button class="btn btn-primary" style="width:100%" onclick="app.register()">註冊並登入</button>
-                <p style="font-size: 0.8rem; margin-top: 15px; cursor: pointer; opacity:0.7" onclick="app.toggleAuthMode()">返回登入</p>
+    <div id="win-explorer" class="window">
+        <div class="win-header">
+            <span style="font-size: 13px;">📁 檔案總管</span>
+            <div class="win-ctrl">
+                <button class="btn" style="padding: 4px 10px; background: transparent;" onclick="fs.triggerUpload()">+ 上傳</button>
+                <div class="ctrl-dot" style="background: #ff5f56;" onclick="ui.close('explorer')"></div>
             </div>
         </div>
-    </div>
-
-    <div id="desktop">
-        <div class="desktop-icons">
-            <div class="icon" onclick="app.openIDE()">
-                <div class="icon-img" style="background: linear-gradient(135deg, #667eea, #764ba2);">⚡</div>
-                <div class="icon-text">Nebula IDE</div>
+        <div class="explorer-main">
+            <div class="sidebar">
+                <div class="side-item active">🏠 首頁</div>
+                <div class="side-item">📄 文件</div>
+                <div class="side-item">📥 下載</div>
+                <div class="side-item">🖼️ 圖片</div>
             </div>
-            
-            <div class="icon" onclick="app.createNewFilePrompt()">
-                <div class="icon-img" style="background: linear-gradient(135deg, #2af598, #009efd);">+</div>
-                <div class="icon-text">新建專案</div>
-            </div>
-
-            <div class="icon" onclick="app.triggerUpload()">
-                <div class="icon-img" style="background: linear-gradient(135deg, #ff9a9e, #fecfef);">
-                    <svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
+            <div class="file-view">
+                <div class="file-table-header">
+                    <span>名稱</span>
+                    <span>修改日期</span>
+                    <span>類型</span>
+                    <span>大小</span>
                 </div>
-                <div class="icon-text">匯入檔案</div>
-            </div>
-        </div>
-
-        <input type="file" id="upload-input" onchange="app.handleFileUpload(this)">
-
-        <div id="ide-window" class="glass-panel">
-            <div class="ide-toolbar">
-                <div style="font-weight:bold; margin-right:15px; color:var(--neon-blue);">NEBULA</div>
-                <span id="current-filename" style="opacity:0.6; font-size:0.9rem;">未命名</span>
-                <div style="flex:1"></div>
-                <button class="btn" onclick="app.saveFile()">💾 儲存</button>
-                <button class="btn btn-primary" onclick="app.runCode()">▶ 執行</button>
-                <button class="btn" onclick="app.closeIDE()" style="background:#ff5f56; width:30px; padding:0; height:30px;">✕</button>
-            </div>
-
-            <div class="ide-body">
-                <div class="editor-pane">
-                    <div class="editor-tabs">
-                        <div class="tab active" onclick="app.switchTab('html', this)">HTML</div>
-                        <div class="tab" onclick="app.switchTab('css', this)">CSS</div>
-                        <div class="tab" onclick="app.switchTab('js', this)">JS</div>
+                <div id="file-list">
                     </div>
-                    <textarea id="code-html" class="code-area" placeholder="HTML Code"></textarea>
-                    <textarea id="code-css" class="code-area" style="display:none;" placeholder="CSS Code"></textarea>
-                    <textarea id="code-js" class="code-area" style="display:none;" placeholder="JS Code"></textarea>
-                </div>
-                <div class="preview-pane">
-                    <iframe id="preview-frame"></iframe>
-                </div>
             </div>
-        </div>
-
-        <div class="taskbar glass-panel">
-            <div class="icon" style="width:40px; margin:0;" title="開始">❖</div>
-            <div class="icon" style="width:40px; margin:0;" onclick="app.toggleIDE()">⚡</div>
         </div>
     </div>
 
-    <div id="toast" class="toast">訊息提示</div>
+    <input type="file" id="file-input" style="display:none" onchange="fs.handleUpload(this)">
+
+    <div class="taskbar">
+        <div class="task-icon" onclick="ui.toggle('explorer')">📁</div>
+        <div class="task-icon">🌐</div>
+        <div class="task-icon">⚙️</div>
+    </div>
+
+    <div id="toast"></div>
 
     <script>
-        const app = {
-            currentUser: null,
-            currentFile: null,
-
-            init: function() {
-                this.updateClock();
-                setInterval(() => this.updateClock(), 1000);
-            },
-
-            // --- 鎖定畫面與時間 ---
-            updateClock: function() {
-                const now = new Date();
-                // 補零
-                const h = String(now.getHours()).padStart(2, '0');
-                const m = String(now.getMinutes()).padStart(2, '0');
-                document.getElementById('clock-time').innerText = `${h}:${m}`;
-                
-                const options = { month: 'long', day: 'numeric', weekday: 'long' };
-                document.getElementById('clock-date').innerText = now.toLocaleDateString('zh-TW', options);
-            },
-
-            unlockSystem: function() {
-                document.getElementById('lock-screen').classList.add('slide-up');
-                setTimeout(() => {
-                    document.getElementById('auth-screen').classList.add('visible');
-                }, 300);
-            },
-
-            // --- 認證系統 ---
-            toggleAuthMode: function() {
-                const login = document.getElementById('login-form');
-                const reg = document.getElementById('register-form');
-                const title = document.getElementById('auth-title');
-                
-                if(login.style.display === 'none') {
-                    login.style.display = 'block'; reg.style.display = 'none';
-                    title.innerText = '歡迎回來';
-                } else {
-                    login.style.display = 'none'; reg.style.display = 'block';
-                    title.innerText = '建立您的帳戶';
+        // --- 核心系統管理 ---
+        const ui = {
+            unlock() { document.getElementById('lock-screen').classList.add('hidden'); },
+            toggle(id) { 
+                const win = document.getElementById('win-' + id);
+                win.style.display = (win.style.display === 'flex') ? 'none' : 'flex';
+                if(win.style.display === 'flex') {
+                    win.classList.add('active');
+                    if(id === 'explorer') fs.render();
                 }
             },
-
-            getUsers: function() { return JSON.parse(localStorage.getItem('nebula_users') || '{}'); },
-
-            register: function() {
-                const u = document.getElementById('reg-user').value.trim();
-                const p = document.getElementById('reg-pass').value.trim();
-                if(!u || !p) return this.toast('請填寫完整資訊');
-                
-                let users = this.getUsers();
-                if(users[u]) return this.toast('使用者名稱已存在');
-
-                users[u] = p;
-                localStorage.setItem('nebula_users', JSON.stringify(users));
-                localStorage.setItem(`nebula_files_${u}`, JSON.stringify({})); // 初始化檔案區
-                
-                this.loginProcess(u);
-            },
-
-            login: function() {
-                const u = document.getElementById('login-user').value.trim();
-                const p = document.getElementById('login-pass').value.trim();
-                let users = this.getUsers();
-
-                if(users[u] && users[u] === p) {
-                    this.loginProcess(u);
-                } else {
-                    this.toast('帳號或密碼錯誤');
-                }
-            },
-
-            loginProcess: function(user) {
-                this.currentUser = user;
-                document.getElementById('auth-screen').style.opacity = '0';
-                setTimeout(() => {
-                    document.getElementById('auth-screen').style.display = 'none';
-                    document.getElementById('desktop').style.display = 'block';
-                    this.toast(`歡迎進入 Nebula OS, ${user}`);
-                }, 500);
-            },
-
-            // --- 檔案上傳 (匯入) ---
-            triggerUpload: function() {
-                document.getElementById('upload-input').click();
-            },
-
-            handleFileUpload: function(inputElement) {
-                const file = inputElement.files[0];
-                if (!file) return;
-
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const content = e.target.result;
-                    const fileName = file.name;
-                    
-                    // 詢問使用者要存成什麼專案名
-                    const projectName = prompt(`檢測到檔案 ${fileName}。\n請為這個新專案命名:`, fileName.split('.')[0]);
-                    
-                    if(projectName) {
-                        this.createProjectFromImport(projectName, fileName, content);
-                    }
-                    // 清空 input 讓同檔名可再次上傳
-                    inputElement.value = '';
-                };
-                reader.readAsText(file);
-            },
-
-            createProjectFromImport: function(projName, originalFileName, content) {
-                let files = this.getUserFiles();
-                
-                // 預設結構
-                let newProject = { html: '', css: '', js: '' };
-                
-                // 簡單判斷檔案類型自動歸位
-                if(originalFileName.endsWith('.html')) {
-                    newProject.html = content;
-                    newProject.css = '/* 匯入的 HTML 專案 */';
-                } else if(originalFileName.endsWith('.css')) {
-                    newProject.html = '<h1>CSS Import Mode</h1>';
-                    newProject.css = content;
-                } else if(originalFileName.endsWith('.js')) {
-                    newProject.html = '<h1>JS Import Mode</h1>';
-                    newProject.js = content;
-                } else {
-                    newProject.html = `\n<pre>${content}</pre>`;
-                }
-
-                files[projName] = newProject;
-                this.saveUserFiles(files);
-                this.toast(`匯入成功: ${projName}`);
-                this.openFile(projName);
-            },
-
-            // --- IDE 與檔案系統 ---
-            getUserFiles: function() {
-                return JSON.parse(localStorage.getItem(`nebula_files_${this.currentUser}`) || '{}');
-            },
-
-            saveUserFiles: function(files) {
-                localStorage.setItem(`nebula_files_${this.currentUser}`, JSON.stringify(files));
-            },
-
-            createNewFilePrompt: function() {
-                const name = prompt("新專案名稱:");
-                if(!name) return;
-                
-                let files = this.getUserFiles();
-                if(files[name]) return this.toast('專案已存在');
-
-                files[name] = { 
-                    html: '<h1>Hello World</h1>', 
-                    css: 'body { color: #333; padding: 20px; }', 
-                    js: 'console.log("Ready");' 
-                };
-                this.saveUserFiles(files);
-                this.openFile(name);
-            },
-
-            openFile: function(name) {
-                let files = this.getUserFiles();
-                if(!files[name]) return;
-                this.currentFile = name;
-                
-                const data = files[name];
-                document.getElementById('code-html').value = data.html || '';
-                document.getElementById('code-css').value = data.css || '';
-                document.getElementById('code-js').value = data.js || '';
-                document.getElementById('current-filename').innerText = name;
-                
-                this.openIDE();
-                this.runCode();
-            },
-
-            saveFile: function() {
-                if(!this.currentUser || !this.currentFile) return;
-                let files = this.getUserFiles();
-                files[this.currentFile] = {
-                    html: document.getElementById('code-html').value,
-                    css: document.getElementById('code-css').value,
-                    js: document.getElementById('code-js').value
-                };
-                this.saveUserFiles(files);
-                this.toast('儲存成功！');
-            },
-
-            // --- 視窗操作 ---
-            openIDE: function() {
-                const win = document.getElementById('ide-window');
-                win.classList.add('open');
-                // 重置可能的最小化狀態
-                win.style.transform = 'translate(-50%, -50%) scale(1)';
-                win.style.opacity = '1';
-            },
-
-            closeIDE: function() {
-                document.getElementById('ide-window').classList.remove('open');
-            },
-
-            toggleIDE: function() {
-                const win = document.getElementById('ide-window');
-                if(win.classList.contains('open') && win.style.opacity !== '0') {
-                    // 最小化
-                    win.style.transform = 'translate(-50%, 100%) scale(0.5)';
-                    win.style.opacity = '0';
-                } else {
-                    // 開啟
-                    this.openIDE();
-                }
-            },
-
-            switchTab: function(type, el) {
-                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                el.classList.add('active');
-                
-                ['html', 'css', 'js'].forEach(t => {
-                    document.getElementById(`code-${t}`).style.display = (t === type) ? 'block' : 'none';
-                });
-            },
-
-            runCode: function() {
-                const h = document.getElementById('code-html').value;
-                const c = `<style>${document.getElementById('code-css').value}</style>`;
-                const j = `<script>${document.getElementById('code-js').value}<\/script>`;
-                
-                const frame = document.getElementById('preview-frame');
-                const doc = frame.contentDocument || frame.contentWindow.document;
-                doc.open();
-                doc.write(h + c + j);
-                doc.close();
-            },
-
-            toast: function(msg) {
+            close(id) { document.getElementById('win-' + id).style.display = 'none'; },
+            showToast(msg) {
                 const t = document.getElementById('toast');
-                t.innerText = msg;
-                t.classList.add('show');
-                setTimeout(() => t.classList.remove('show'), 3000);
+                t.innerText = msg; t.style.opacity = 1;
+                setTimeout(() => t.style.opacity = 0, 2000);
             }
         };
 
-        app.init();
+        // --- 檔案系統管理 (Win11 邏輯) ---
+        const fs = {
+            dbName: 'nebula_vfs',
+            
+            // 取得所有檔案
+            getAll() {
+                return JSON.parse(localStorage.getItem(this.dbName) || '[]');
+            },
+
+            // 觸發上傳
+            triggerUpload() { document.getElementById('file-input').click(); },
+
+            // 處理上傳並計算元數據
+            handleUpload(input) {
+                const file = input.files[0];
+                if(!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const files = this.getAll();
+                    const newFile = {
+                        id: Date.now(),
+                        name: file.name,
+                        type: file.name.split('.').pop().toUpperCase(),
+                        size: file.size, // 原始容量(Bytes)
+                        lastModified: new Date().toLocaleString(),
+                        content: e.target.result
+                    };
+                    
+                    files.push(newFile);
+                    localStorage.setItem(this.dbName, JSON.stringify(files));
+                    ui.showToast(`上傳成功: ${file.name}`);
+                    this.render();
+                };
+                reader.readAsText(file); // 這裡預設讀取文本，圖片可改 readAsDataURL
+                input.value = '';
+            },
+
+            // 格式化容量
+            formatSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            },
+
+            // 取得圖示
+            getIcon(type) {
+                const icons = { 'HTML': '🌐', 'CSS': '🎨', 'JS': '📜', 'TXT': '📄', 'PNG': '🖼️', 'JPG': '🖼️' };
+                return icons[type] || '📄';
+            },
+
+            // 渲染檔案清單 (模擬 Windows 11 表格視圖)
+            render() {
+                const list = document.getElementById('file-list');
+                const files = this.getAll();
+                list.innerHTML = '';
+
+                if(files.length === 0) {
+                    list.innerHTML = `<div style="text-align:center; padding:50px; color:gray;">資料夾是空的</div>`;
+                    return;
+                }
+
+                files.forEach(f => {
+                    const row = document.createElement('div');
+                    row.className = 'file-row';
+                    row.innerHTML = `
+                        <div class="file-info">
+                            <span class="file-icon">${this.getIcon(f.type)}</span>
+                            <span>${f.name}</span>
+                        </div>
+                        <div style="color:var(--text-dim)">${f.lastModified}</div>
+                        <div style="color:var(--text-dim)">${f.type} 檔案</div>
+                        <div style="color:var(--text-dim)">${this.formatSize(f.size)}</div>
+                    `;
+                    row.onclick = () => ui.showToast(`開啟檔案: ${f.name} (容量: ${this.formatSize(f.size)})`);
+                    list.appendChild(row);
+                });
+            }
+        };
+
+        // 更新時間
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('lock-time').innerText = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
     </script>
 </body>
 </html>
