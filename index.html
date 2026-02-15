@@ -2,286 +2,717 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Nova OS - Tablet IDE</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nebula IDE - Tablet Edition</title>
     <style>
+        /* --- 核心變數與基礎設定 --- */
         :root {
-            --glass: rgba(15, 23, 42, 0.7);
-            --border: rgba(255, 255, 255, 0.1);
+            --bg-gradient: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            --neon-blue: #00f3ff;
+            --neon-purple: #bc13fe;
+            --text-main: #ffffff;
+            --text-dim: #a0a0a0;
+            --taskbar-height: 60px;
         }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: #020617;
-            margin: 0;
-            overflow: hidden;
-            height: 100vh;
-            width: 100vw;
-            color: white;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .code-font { font-family: 'Fira Code', monospace; }
-        .glass {
-            background: var(--glass);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border: 1px solid var(--border);
-        }
-        .glow-blue { box-shadow: 0 0 40px rgba(59, 130, 246, 0.2); }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
+
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
         
-        @keyframes flow {
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            background: var(--bg-gradient);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            color: var(--text-main);
+        }
+
+        @keyframes gradientBG {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
         }
-        .animate-bg {
-            background: linear-gradient(-45deg, #020617, #0f172a, #1e1b4b, #020617);
-            background-size: 400% 400%;
-            animation: flow 15s ease infinite;
+
+        /* --- 通用元件樣式 --- */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: var(--glass-border);
+            box-shadow: var(--glass-shadow);
+            border-radius: 16px;
+        }
+
+        .btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .btn:hover {
+            background: rgba(255,255,255,0.2);
+            box-shadow: 0 0 15px var(--neon-blue);
+            border-color: var(--neon-blue);
+        }
+
+        .btn:active { transform: scale(0.95); }
+
+        .btn-primary {
+            background: linear-gradient(90deg, #00c6ff, #0072ff);
+            border: none;
+        }
+
+        input {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 12px;
+            border-radius: 8px;
+            color: white;
+            width: 100%;
+            margin-bottom: 15px;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        input:focus {
+            border-color: var(--neon-purple);
+            box-shadow: 0 0 10px rgba(188, 19, 254, 0.3);
+        }
+
+        /* --- 登入/註冊頁面 --- */
+        #auth-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            z-index: 1000;
+        }
+
+        .auth-box {
+            width: 380px;
+            padding: 40px;
+            text-align: center;
+            animation: floatUp 0.8s ease-out;
+        }
+
+        @keyframes floatUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            background: linear-gradient(to right, var(--neon-blue), var(--neon-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0, 243, 255, 0.3);
+        }
+
+        /* --- 桌面環境 --- */
+        #desktop {
+            display: none; /* 登入後顯示 */
+            width: 100%; height: 100%;
+            position: relative;
+        }
+
+        .desktop-icons {
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, 100px);
+            gap: 20px;
+        }
+
+        .icon {
+            display: flex; flex-direction: column; align-items: center;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 8px;
+            transition: 0.2s;
+        }
+
+        .icon:hover { background: rgba(255,255,255,0.1); }
+        .icon:active { transform: scale(0.95); }
+
+        .icon-img {
+            width: 48px; height: 48px;
+            background: linear-gradient(135deg, #00c6ff, #0072ff);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .icon-text { font-size: 0.9rem; text-shadow: 0 1px 2px black; }
+
+        /* --- 工作列 --- */
+        .taskbar {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            height: var(--taskbar-height);
+            display: flex; align-items: center; justify-content: center;
+            gap: 15px;
+            z-index: 900;
+            border-radius: 0;
+            border-top: var(--glass-border);
+        }
+
+        .taskbar-btn {
+            width: 40px; height: 40px;
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            transition: 0.3s;
         }
         
-        .window-enter { animation: zoomIn 0.2s ease-out; }
-        @keyframes zoomIn {
-            from { opacity: 0; transform: scale(0.95) translateY(10px); }
-            to { opacity: 1; transform: scale(1) translateY(0); }
+        .taskbar-btn:hover, .taskbar-btn.active {
+            background: rgba(255,255,255,0.2);
+            box-shadow: 0 0 10px var(--neon-blue);
         }
+
+        /* --- IDE 視窗 --- */
+        #ide-window {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            width: 90%; height: 85%;
+            display: flex; flex-direction: column;
+            opacity: 0; pointer-events: none;
+            transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+            z-index: 100;
+        }
+
+        #ide-window.open {
+            opacity: 1; pointer-events: all;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        #ide-window.fullscreen {
+            width: 100%; height: 100%;
+            border-radius: 0;
+            top: 0; left: 0;
+            transform: none;
+            border: none;
+        }
+
+        /* IDE 頂部標題列 */
+        .window-header {
+            height: 40px;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 15px;
+            border-bottom: var(--glass-border);
+            cursor: default;
+        }
+
+        .window-title { font-size: 0.9rem; font-weight: bold; letter-spacing: 1px; }
+
+        .window-controls { display: flex; gap: 8px; }
+        .win-btn { width: 12px; height: 12px; border-radius: 50%; cursor: pointer; }
+        .win-close { background: #ff5f56; }
+        .win-max { background: #27c93f; }
+        .win-min { background: #ffbd2e; }
+
+        /* IDE 工具列 */
+        .ide-toolbar {
+            height: 50px;
+            display: flex; align-items: center;
+            padding: 0 10px;
+            border-bottom: var(--glass-border);
+            gap: 10px;
+        }
+
+        /* IDE 主體 (分割畫面) */
+        .ide-body {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 左側編輯區 */
+        .editor-pane {
+            flex: 1;
+            display: flex; flex-direction: column;
+            min-width: 20%;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .editor-tabs {
+            display: flex;
+            background: rgba(0,0,0,0.2);
+        }
+
+        .tab {
+            padding: 8px 20px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            border-right: 1px solid rgba(255,255,255,0.05);
+            transition: 0.2s;
+        }
+
+        .tab.active {
+            background: rgba(255,255,255,0.05);
+            color: var(--neon-blue);
+            border-top: 2px solid var(--neon-blue);
+        }
+
+        .code-area {
+            flex: 1;
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: #d4d4d4;
+            padding: 15px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: none;
+            outline: none;
+            user-select: text; /* 允許選取文字 */
+        }
+        
+        .code-area::selection { background: rgba(0, 243, 255, 0.3); }
+
+        /* 分割線 */
+        .resizer {
+            width: 6px;
+            background: rgba(255,255,255,0.1);
+            cursor: col-resize;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s;
+            z-index: 10;
+        }
+        .resizer:hover, .resizer.dragging { background: var(--neon-purple); }
+
+        /* 右側預覽區 */
+        .preview-pane {
+            flex: 1;
+            background: white;
+            position: relative;
+            min-width: 20%;
+        }
+
+        iframe { width: 100%; height: 100%; border: none; }
+
+        /* 檔案列表 (Modal) */
+        .modal {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px);
+            display: none; justify-content: center; align-items: center;
+            z-index: 200;
+        }
+        .modal.show { display: flex; }
+        
+        .file-list {
+            list-style: none; padding: 0; margin: 0;
+            max-height: 200px; overflow-y: auto;
+        }
+        .file-item {
+            padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer; display: flex; justify-content: space-between;
+        }
+        .file-item:hover { background: rgba(255,255,255,0.1); }
+
+        /* 通知 */
+        .toast {
+            position: fixed; top: 20px; right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid var(--neon-blue);
+            color: white; padding: 10px 20px;
+            border-radius: 8px;
+            transform: translateX(150%);
+            transition: transform 0.3s;
+            z-index: 2000;
+        }
+        .toast.show { transform: translateX(0); }
+
     </style>
-
-    <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@19.0.0",
-    "react-dom": "https://esm.sh/react-dom@19.0.0",
-    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
-    "lucide-react": "https://esm.sh/lucide-react@0.460.0?external=react",
-    "react/": "https://esm.sh/react@^19.2.4/"
-  }
-}
-</script>
 </head>
-<body class="animate-bg">
-    <div id="root"></div>
+<body>
 
-    <script type="module">
-        import React, { useState, useEffect, useMemo } from 'react';
-        import { createRoot } from 'react-dom/client';
-        import * as Lucide from 'lucide-react';
+    <div id="auth-screen" class="glass-panel" style="border-radius: 0; background: rgba(0,0,0,0.2);">
+        <div class="glass-panel auth-box">
+            <div class="logo">NEBULA IDE</div>
+            <div id="login-form">
+                <h3 style="margin-top:0">系統登入</h3>
+                <input type="text" id="login-user" placeholder="使用者名稱">
+                <input type="password" id="login-pass" placeholder="密碼">
+                <button class="btn btn-primary" style="width:100%" onclick="app.login()">進入系統</button>
+                <p style="font-size: 0.8rem; margin-top: 15px; cursor: pointer; color: var(--neon-blue);" onclick="app.toggleAuthMode()">還沒有帳號？註冊</p>
+            </div>
+            <div id="register-form" style="display:none;">
+                <h3 style="margin-top:0">創建帳戶</h3>
+                <input type="text" id="reg-user" placeholder="設定使用者名稱">
+                <input type="password" id="reg-pass" placeholder="設定密碼">
+                <button class="btn" style="width:100%; border-color: var(--neon-purple);" onclick="app.register()">註冊並儲存</button>
+                <p style="font-size: 0.8rem; margin-top: 15px; cursor: pointer; color: var(--text-dim);" onclick="app.toggleAuthMode()">返回登入</p>
+            </div>
+        </div>
+    </div>
 
-        const STORAGE_KEY = 'nova_os_v3';
-        const INITIAL_FILES = [
-            { id: '1', name: 'index.html', type: 'html', content: '<div class="h-screen flex flex-col items-center justify-center bg-slate-950 text-white text-center p-10">\n  <h1 class="text-6xl font-black mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">Nova OS</h1>\n  <p class="text-white/40 text-xl font-medium tracking-widest uppercase">System Core Initialized</p>\n</div>' },
-            { id: '2', name: 'style.css', type: 'css', content: 'body { margin: 0; background: #020617; font-family: sans-serif; }' },
-            { id: '3', name: 'main.js', type: 'js', content: 'console.log("Nova Terminal Ready.");' }
-        ];
+    <div id="desktop">
+        <div class="desktop-icons">
+            <div class="icon" onclick="app.openIDE()">
+                <div class="icon-img">⚡</div>
+                <div class="icon-text">Nebula IDE</div>
+            </div>
+            <div class="icon" onclick="app.createNewFilePrompt()">
+                <div class="icon-img" style="background: linear-gradient(135deg, #11998e, #38ef7d);">+</div>
+                <div class="icon-text">新建專案</div>
+            </div>
+        </div>
 
-        const App = () => {
-            const [user, setUser] = useState(null);
-            const [auth, setAuth] = useState({ user: '', pass: '', isReg: false });
-            const [windows, setWindows] = useState({ IDE: false, FILES: false });
-            const [time, setTime] = useState(new Date());
+        <div id="ide-window" class="glass-panel">
+            <div class="window-header">
+                <div class="window-title">Nebula Editor - <span id="current-filename">未命名</span></div>
+                <div class="window-controls">
+                    <div class="win-btn win-min" title="最小化" onclick="app.minimizeIDE()"></div>
+                    <div class="win-btn win-max" title="全螢幕" onclick="app.toggleFullscreen()"></div>
+                    <div class="win-btn win-close" title="關閉" onclick="app.closeIDE()"></div>
+                </div>
+            </div>
 
-            useEffect(() => {
-                const timer = setInterval(() => setTime(new Date()), 1000);
-                return () => clearInterval(timer);
-            }, []);
+            <div class="ide-toolbar">
+                <button class="btn" onclick="app.showFileList()">📂 開啟</button>
+                <button class="btn" onclick="app.saveFile()">💾 儲存</button>
+                <div style="flex:1"></div>
+                <button class="btn btn-primary" onclick="app.runCode()">▶ 執行</button>
+            </div>
 
-            const handleAuth = (e) => {
-                e.preventDefault();
-                const store = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-                if (auth.isReg) {
-                    if (store[auth.user]) return alert('User already exists');
-                    store[auth.user] = { username: auth.user, password: auth.pass, files: INITIAL_FILES };
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-                    alert('Registration complete! Please login.');
-                    setAuth({ ...auth, isReg: false });
+            <div class="ide-body" id="ide-body">
+                <div class="editor-pane" id="editor-pane">
+                    <div class="editor-tabs">
+                        <div class="tab active" onclick="app.switchTab('html', this)">HTML</div>
+                        <div class="tab" onclick="app.switchTab('css', this)">CSS</div>
+                        <div class="tab" onclick="app.switchTab('js', this)">JS</div>
+                    </div>
+                    <textarea id="code-html" class="code-area" placeholder="" spellcheck="false"></textarea>
+                    <textarea id="code-css" class="code-area" style="display:none;" placeholder="/* CSS Code here */" spellcheck="false"></textarea>
+                    <textarea id="code-js" class="code-area" style="display:none;" placeholder="// JavaScript Code here" spellcheck="false"></textarea>
+                </div>
+
+                <div class="resizer" id="resizer"></div>
+
+                <div class="preview-pane" id="preview-pane">
+                    <iframe id="preview-frame"></iframe>
+                </div>
+            </div>
+        </div>
+
+        <div class="taskbar glass-panel">
+            <div class="taskbar-btn" title="開始">❖</div>
+            <div class="taskbar-btn" id="taskbar-ide-icon" title="IDE" onclick="app.toggleIDEVisibility()">⚡</div>
+        </div>
+
+        <div id="file-modal" class="modal">
+            <div class="glass-panel" style="width: 300px; padding: 20px;">
+                <h3>我的檔案</h3>
+                <ul id="file-list-ul" class="file-list">
+                    </ul>
+                <div style="margin-top: 20px; text-align: right;">
+                    <button class="btn" onclick="document.getElementById('file-modal').classList.remove('show')">取消</button>
+                    <button class="btn btn-primary" onclick="app.createNewFilePrompt()">新建</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="toast" class="toast">操作成功</div>
+
+    <script>
+        /**
+         * Nebula IDE 邏輯核心
+         * 包含：用戶認證、檔案系統(LocalStorage)、IDE操作、UI互動
+         */
+        const app = {
+            currentUser: null,
+            currentFile: null,
+            isResizing: false,
+            
+            // 初始化
+            init: function() {
+                this.checkSession();
+                this.setupResizer();
+                // 預設代碼範例
+                this.defaultCode = {
+                    html: '<h1>Hello Nebula</h1>\n<p>Welcome to your tablet IDE.</p>\n<button id="demoBtn">Click Me</button>',
+                    css: 'body { font-family: sans-serif; padding: 20px; color: #333; }\nh1 { color: #0072ff; }\nbutton { padding: 10px 20px; background: #0072ff; color: white; border: none; border-radius: 5px; }',
+                    js: 'document.getElementById("demoBtn").addEventListener("click", () => {\n  alert("Button Clicked!");\n});'
+                };
+            },
+
+            // --- 認證系統 ---
+            
+            toggleAuthMode: function() {
+                const login = document.getElementById('login-form');
+                const reg = document.getElementById('register-form');
+                if(login.style.display === 'none') {
+                    login.style.display = 'block'; reg.style.display = 'none';
                 } else {
-                    const u = store[auth.user];
-                    if (u && u.password === auth.pass) {
-                        setUser(u);
-                        // 登入後預設開啟 IDE
-                        setWindows({ ...windows, IDE: true });
-                    } else alert('Access Denied: Invalid Credentials');
+                    login.style.display = 'none'; reg.style.display = 'block';
                 }
-            };
+            },
 
-            const updateFiles = (newFiles) => {
-                const store = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-                if (user && store[user.username]) {
-                    store[user.username].files = newFiles;
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-                    setUser({ ...user, files: newFiles });
+            getUsers: function() {
+                return JSON.parse(localStorage.getItem('nebula_users') || '{}');
+            },
+
+            register: function() {
+                const u = document.getElementById('reg-user').value.trim();
+                const p = document.getElementById('reg-pass').value.trim();
+                if(!u || !p) return this.toast('請填寫完整資訊');
+                
+                let users = this.getUsers();
+                if(users[u]) return this.toast('使用者名稱已存在');
+
+                users[u] = p; // 簡單儲存，實際應用應 Hash
+                localStorage.setItem('nebula_users', JSON.stringify(users));
+                
+                // 初始化該用戶的檔案存儲
+                localStorage.setItem(`nebula_files_${u}`, JSON.stringify({}));
+                
+                this.toast('註冊成功！請登入');
+                this.toggleAuthMode();
+            },
+
+            login: function() {
+                const u = document.getElementById('login-user').value.trim();
+                const p = document.getElementById('login-pass').value.trim();
+                let users = this.getUsers();
+
+                if(users[u] && users[u] === p) {
+                    this.currentUser = u;
+                    document.getElementById('auth-screen').style.display = 'none';
+                    document.getElementById('desktop').style.display = 'block';
+                    this.toast(`歡迎回來, ${u}`);
+                } else {
+                    this.toast('帳號或密碼錯誤');
                 }
-            };
+            },
 
-            // 登入介面
-            if (!user) {
-                return React.createElement('div', { className: 'h-screen flex items-center justify-center p-6' },
-                    React.createElement('div', { className: 'w-full max-w-sm glass p-10 rounded-[2.5rem] shadow-2xl relative' },
-                        React.createElement('div', { className: 'flex flex-col items-center mb-8' },
-                            React.createElement('div', { className: 'w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center mb-4 glow-blue' },
-                                React.createElement(Lucide.Cpu, { className: 'text-white', size: 32 })
-                            ),
-                            React.createElement('h1', { className: 'text-3xl font-black tracking-tighter' }, 'NOVA OS')
-                        ),
-                        React.createElement('form', { onSubmit: handleAuth, className: 'space-y-4' },
-                            React.createElement('input', { 
-                                type: 'text', placeholder: 'Username', required: true,
-                                className: 'w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white outline-none focus:border-blue-500 transition-all',
-                                value: auth.user, onChange: e => setAuth({...auth, user: e.target.value})
-                            }),
-                            React.createElement('input', { 
-                                type: 'password', placeholder: 'Password', required: true,
-                                className: 'w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white outline-none focus:border-blue-500 transition-all',
-                                value: auth.pass, onChange: e => setAuth({...auth, pass: e.target.value})
-                            }),
-                            React.createElement('button', { type: 'submit', className: 'w-full py-4 bg-blue-600 rounded-2xl font-bold hover:bg-blue-500 active:scale-95 transition-all' }, 
-                                auth.isReg ? 'INITIALIZE ACCOUNT' : 'SECURE LOGIN'
-                            )
-                        ),
-                        React.createElement('button', { 
-                            onClick: () => setAuth({...auth, isReg: !auth.isReg}),
-                            className: 'w-full mt-6 text-white/30 text-[10px] font-bold tracking-widest'
-                        }, auth.isReg ? 'ALREADY REGISTERED? LOGIN' : 'NEW USER? CREATE SYSTEM ID')
-                    )
-                );
+            checkSession: function() {
+                // 簡單 Session 檢查 (可選)
+            },
+
+            // --- 檔案系統 (LocalStorage) ---
+
+            getUserFiles: function() {
+                return JSON.parse(localStorage.getItem(`nebula_files_${this.currentUser}`) || '{}');
+            },
+
+            saveUserFiles: function(files) {
+                localStorage.setItem(`nebula_files_${this.currentUser}`, JSON.stringify(files));
+            },
+
+            createNewFilePrompt: function() {
+                const name = prompt("請輸入檔案名稱 (例如: project1):");
+                if(!name) return;
+                
+                let files = this.getUserFiles();
+                if(files[name]) {
+                    this.toast('檔案已存在');
+                    return;
+                }
+
+                // 建立新檔案
+                files[name] = JSON.parse(JSON.stringify(this.defaultCode)); // Deep copy
+                this.saveUserFiles(files);
+                this.openFile(name);
+                document.getElementById('file-modal').classList.remove('show');
+            },
+
+            openFile: function(name) {
+                let files = this.getUserFiles();
+                if(!files[name]) return;
+
+                this.currentFile = name;
+                const content = files[name];
+                
+                document.getElementById('code-html').value = content.html;
+                document.getElementById('code-css').value = content.css;
+                document.getElementById('code-js').value = content.js;
+                
+                document.getElementById('current-filename').innerText = name;
+                this.openIDE();
+                this.runCode(); // 載入後自動執行一次
+            },
+
+            saveFile: function() {
+                if(!this.currentUser || !this.currentFile) return;
+                
+                let files = this.getUserFiles();
+                files[this.currentFile] = {
+                    html: document.getElementById('code-html').value,
+                    css: document.getElementById('code-css').value,
+                    js: document.getElementById('code-js').value
+                };
+                
+                this.saveUserFiles(files);
+                this.toast('檔案已儲存');
+            },
+
+            showFileList: function() {
+                const list = document.getElementById('file-list-ul');
+                list.innerHTML = '';
+                const files = this.getUserFiles();
+                
+                Object.keys(files).forEach(name => {
+                    const li = document.createElement('li');
+                    li.className = 'file-item';
+                    li.innerHTML = `<span>${name}</span> <span>✎</span>`;
+                    li.onclick = () => {
+                        app.openFile(name);
+                        document.getElementById('file-modal').classList.remove('show');
+                    };
+                    list.appendChild(li);
+                });
+                
+                document.getElementById('file-modal').classList.add('show');
+            },
+
+            // --- IDE UI 操作 ---
+
+            openIDE: function() {
+                const win = document.getElementById('ide-window');
+                win.classList.add('open');
+                win.style.transform = 'translate(-50%, -50%) scale(1)'; // Reset minimize
+                win.style.opacity = '1';
+                document.getElementById('taskbar-ide-icon').classList.add('active');
+            },
+
+            closeIDE: function() {
+                // 如果需要確認儲存可以在這裡加
+                document.getElementById('ide-window').classList.remove('open');
+                document.getElementById('taskbar-ide-icon').classList.remove('active');
+                this.currentFile = null;
+            },
+
+            minimizeIDE: function() {
+                const win = document.getElementById('ide-window');
+                win.style.transform = 'translate(-50%, 100%) scale(0.5)';
+                win.style.opacity = '0';
+                // Note: Keep .open class to indicate it's running, just hidden visually
+            },
+            
+            toggleIDEVisibility: function() {
+                const win = document.getElementById('ide-window');
+                if(win.style.opacity === '0' || !win.classList.contains('open')) {
+                    this.openIDE();
+                } else {
+                    this.minimizeIDE();
+                }
+            },
+
+            toggleFullscreen: function() {
+                document.getElementById('ide-window').classList.toggle('fullscreen');
+            },
+
+            switchTab: function(type, tabEl) {
+                // UI update
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                tabEl.classList.add('active');
+                
+                // Show/Hide textareas
+                document.getElementById('code-html').style.display = 'none';
+                document.getElementById('code-css').style.display = 'none';
+                document.getElementById('code-js').style.display = 'none';
+                
+                document.getElementById(`code-${type}`).style.display = 'block';
+            },
+
+            runCode: function() {
+                const html = document.getElementById('code-html').value;
+                const css = `<style>${document.getElementById('code-css').value}</style>`;
+                const js = `<script>${document.getElementById('code-js').value}<\/script>`;
+                
+                const previewFrame = document.getElementById('preview-frame');
+                const previewDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+                
+                previewDoc.open();
+                previewDoc.write(html + css + js);
+                previewDoc.close();
+                
+                // 簡單閃爍效果提示已更新
+                const pPane = document.getElementById('preview-pane');
+                pPane.style.opacity = '0.5';
+                setTimeout(() => pPane.style.opacity = '1', 150);
+            },
+
+            // --- 工具與事件 ---
+
+            toast: function(msg) {
+                const t = document.getElementById('toast');
+                t.innerText = msg;
+                t.classList.add('show');
+                setTimeout(() => t.classList.remove('show'), 3000);
+            },
+
+            setupResizer: function() {
+                const resizer = document.getElementById('resizer');
+                const leftSide = document.getElementById('editor-pane');
+                const rightSide = document.getElementById('preview-pane');
+                const container = document.getElementById('ide-body');
+
+                const onMove = (e) => {
+                    if (!this.isResizing) return;
+                    
+                    // 獲取 X 座標 (相容 Touch 與 Mouse)
+                    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                    
+                    // 計算百分比
+                    const containerRect = container.getBoundingClientRect();
+                    const newWidth = ((clientX - containerRect.left) / containerRect.width) * 100;
+
+                    if (newWidth > 10 && newWidth < 90) {
+                        leftSide.style.width = `${newWidth}%`;
+                        leftSide.style.flex = `0 0 ${newWidth}%`;
+                        // rightSide 自動填滿
+                    }
+                };
+
+                const onStop = () => {
+                    this.isResizing = false;
+                    resizer.classList.remove('dragging');
+                    document.getElementById('ide-window').style.pointerEvents = 'all'; // 恢復 iframe 互動
+                    document.querySelector('iframe').style.pointerEvents = 'all';
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onStop);
+                    document.removeEventListener('touchmove', onMove);
+                    document.removeEventListener('touchend', onStop);
+                };
+
+                const onStart = (e) => {
+                    this.isResizing = true;
+                    resizer.classList.add('dragging');
+                    // 拖拉時禁用 iframe 事件以防止滑鼠被吞掉
+                    document.querySelector('iframe').style.pointerEvents = 'none';
+                    
+                    document.addEventListener('mousemove', onMove);
+                    document.addEventListener('mouseup', onStop);
+                    document.addEventListener('touchmove', onMove);
+                    document.addEventListener('touchend', onStop);
+                };
+
+                resizer.addEventListener('mousedown', onStart);
+                resizer.addEventListener('touchstart', onStart);
             }
-
-            // 桌面系統
-            return React.createElement('div', { className: 'h-screen w-screen relative overflow-hidden' },
-                // 桌面背景圖示
-                React.createElement('div', { className: 'p-8 flex flex-col gap-10' },
-                    React.createElement(DesktopIcon, { icon: Lucide.Code2, label: 'IDE', onClick: () => setWindows({...windows, IDE: true}) }),
-                    React.createElement(DesktopIcon, { icon: Lucide.FolderOpen, label: 'FILES', onClick: () => setWindows({...windows, FILES: true}) })
-                ),
-
-                // 視窗列表
-                windows.IDE && React.createElement(Window, { 
-                    title: 'Nova Code Editor', 
-                    onClose: () => setWindows({...windows, IDE: false}),
-                    children: React.createElement(IDEPane, { files: user.files, onSave: updateFiles })
-                }),
-
-                windows.FILES && React.createElement(Window, { 
-                    title: 'File Explorer', 
-                    onClose: () => setWindows({...windows, FILES: false}),
-                    children: React.createElement('div', { className: 'p-8 grid grid-cols-2 sm:grid-cols-4 gap-6 overflow-y-auto' },
-                        user.files.map(f => React.createElement('div', { 
-                            key: f.id, 
-                            className: 'flex flex-col items-center p-6 glass rounded-3xl hover:bg-white/10 active:scale-95 transition-all cursor-pointer' 
-                        },
-                            React.createElement(Lucide.FileCode, { className: 'text-blue-400 mb-3', size: 40 }),
-                            React.createElement('span', { className: 'text-[10px] font-bold truncate w-full text-center' }, f.name)
-                        ))
-                    )
-                }),
-
-                // 任務欄
-                React.createElement('div', { className: 'fixed bottom-4 left-1/2 -translate-x-1/2 h-16 w-[92%] max-w-2xl glass rounded-2xl px-6 flex items-center justify-between shadow-2xl z-[100]' },
-                    React.createElement('div', { className: 'flex gap-4' },
-                        React.createElement(TaskIcon, { active: windows.IDE, icon: Lucide.Code2, onClick: () => setWindows({...windows, IDE: !windows.IDE}) }),
-                        React.createElement(TaskIcon, { active: windows.FILES, icon: Lucide.FolderOpen, onClick: () => setWindows({...windows, FILES: !windows.FILES}) })
-                    ),
-                    React.createElement('div', { className: 'flex items-center gap-6' },
-                        React.createElement('div', { className: 'text-right hidden sm:block' },
-                            React.createElement('div', { className: 'text-sm font-bold leading-none' }, time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })),
-                            React.createElement('div', { className: 'text-[9px] text-white/30 font-bold mt-1 uppercase' }, time.toLocaleDateString([], { month: 'short', day: 'numeric' }))
-                        ),
-                        React.createElement('button', { 
-                            onClick: () => setUser(null), 
-                            className: 'text-red-400 p-2 hover:bg-red-400/10 rounded-xl transition-all' 
-                        }, React.createElement(Lucide.LogOut, { size: 20 }))
-                    )
-                )
-            );
         };
 
-        // --- 子組件 ---
-        const DesktopIcon = ({ icon, label, onClick }) => (
-            React.createElement('div', { 
-                onClick, 
-                className: 'flex flex-col items-center gap-2 w-16 cursor-pointer active:scale-90 transition-all group' 
-            },
-                React.createElement('div', { className: 'w-16 h-16 glass rounded-2xl flex items-center justify-center text-blue-400 group-hover:bg-white/10 transition-colors' }, 
-                    React.createElement(icon, { size: 32 })
-                ),
-                React.createElement('span', { className: 'text-[10px] font-black bg-black/60 px-2 py-0.5 rounded-full tracking-tighter' }, label)
-            )
-        );
+        // 啟動應用
+        app.init();
 
-        const TaskIcon = ({ active, icon, onClick }) => (
-            React.createElement('button', { 
-                onClick, 
-                className: `p-3 rounded-xl transition-all active:scale-90 ${active ? 'bg-blue-600 text-white shadow-lg glow-blue' : 'text-white/30 hover:bg-white/5'}` 
-            },
-                React.createElement(icon, { size: 24 })
-            )
-        );
-
-        const Window = ({ title, onClose, children }) => (
-            React.createElement('div', { 
-                className: 'fixed inset-4 sm:inset-6 glass rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden z-50 window-enter' 
-            },
-                React.createElement('div', { className: 'h-12 border-b border-white/5 bg-white/5 flex items-center justify-between px-8 shrink-0' },
-                    React.createElement('span', { className: 'text-[10px] font-black tracking-[0.2em] opacity-40 uppercase' }, title),
-                    React.createElement('button', { 
-                        onClick: onClose, // 這裡原本誤寫為 onClick
-                        className: 'text-white/20 hover:text-red-400 p-2 transition-colors' 
-                    }, React.createElement(Lucide.X, { size: 18 }))
-                ),
-                React.createElement('div', { className: 'flex-1 overflow-hidden bg-[#0d1117]' }, children)
-            )
-        );
-
-        const IDEPane = ({ files, onSave }) => {
-            const [localFiles, setLocalFiles] = useState(files);
-            const [activeId, setActiveId] = useState(files[0].id);
-            const active = localFiles.find(f => f.id === activeId);
-
-            const srcDoc = useMemo(() => {
-                const h = localFiles.find(f => f.type === 'html')?.content || '';
-                const c = localFiles.filter(f => f.type === 'css').map(f => f.content).join('\n');
-                const j = localFiles.filter(f => f.type === 'js').map(f => f.content).join('\n');
-                // 轉義 <\/script> 防止 HTML 解析器提早中斷
-                return `<!DOCTYPE html><html><head><script src="https://cdn.tailwindcss.com"><\/script><style>${c}</style></head><body>${h}<script>${j}<\/script></body></html>`;
-            }, [localFiles]);
-
-            return React.createElement('div', { className: 'h-full flex flex-col' },
-                React.createElement('div', { className: 'h-12 border-b border-white/5 bg-slate-900/50 flex items-center px-4 justify-between shrink-0' },
-                    React.createElement('div', { className: 'flex gap-2 overflow-x-auto no-scrollbar pb-1' },
-                        localFiles.map(f => React.createElement('button', { 
-                            key: f.id, onClick: () => setActiveId(f.id),
-                            className: `px-4 h-8 text-[10px] font-bold rounded-full transition-all whitespace-nowrap ${activeId === f.id ? 'bg-blue-600 text-white' : 'text-white/20 hover:bg-white/10'}`
-                        }, f.name))
-                    ),
-                    React.createElement('button', { 
-                        onClick: () => onSave(localFiles), 
-                        className: 'px-4 py-1.5 bg-blue-600 text-white rounded-full text-[10px] font-black tracking-widest hover:bg-blue-500 active:scale-95 transition-all' 
-                    }, 'SAVE')
-                ),
-                React.createElement('div', { className: 'flex-1 flex flex-col sm:flex-row overflow-hidden' },
-                    React.createElement('textarea', { 
-                        value: active.content, 
-                        onChange: e => setLocalFiles(prev => prev.map(f => f.id === activeId ? {...f, content: e.target.value} : f)),
-                        className: 'w-full sm:w-1/2 h-1/2 sm:h-full bg-transparent p-6 text-blue-100/70 code-font outline-none resize-none text-sm border-b sm:border-b-0 sm:border-r border-white/5',
-                        spellCheck: false,
-                        autoFocus: true
-                    }),
-                    React.createElement('div', { className: 'w-full sm:w-1/2 h-1/2 sm:h-full bg-white relative' },
-                        React.createElement('iframe', { srcDoc, className: 'w-full h-full border-none' })
-                    )
-                )
-            );
-        };
-
-        const root = createRoot(document.getElementById('root'));
-        root.render(React.createElement(App));
     </script>
 </body>
 </html>
