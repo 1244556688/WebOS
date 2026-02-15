@@ -3,227 +3,608 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Nebula OS - Explorer Pro</title>
+    <title>WebOS Pro - Tablet IDE</title>
     <style>
+        /* --- 核心變數與重置 --- */
         :root {
-            --bg-main: #001220;
-            --glass: rgba(255, 255, 255, 0.08);
-            --glass-thick: rgba(20, 20, 25, 0.85);
-            --border: 1px solid rgba(255, 255, 255, 0.15);
-            --accent: #00a2ff;
-            --text: #ffffff;
-            --text-dim: #b0b0b0;
+            --bg-dark: #0f0c29;
+            --bg-medium: #302b63;
+            --bg-light: #24243e;
+            --accent-color: #00d2ff;
+            --accent-secondary: #3a7bd5;
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            --text-main: #ffffff;
+            --text-muted: #a0a0a0;
+            --win11-hover: rgba(255, 255, 255, 0.05);
         }
 
-        * { box-sizing: border-box; font-family: 'Segoe UI', system-ui; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: var(--bg-main); color: var(--text); }
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: 'Segoe UI', Roboto, Helvetica, sans-serif; background: black; color: var(--text-main); }
 
-        /* 動態背景 */
-        #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; 
-            background: linear-gradient(45deg, #0f0c29, #302b63, #24243e); background-size: 400% 400%; animation: grad 15s infinite; }
-        @keyframes grad { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
-
-        /* --- 鎖定與登入介面 --- */
-        .full-screen-overlay { position: fixed; inset: 0; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(20px); transition: 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
-        .hidden { transform: translateY(-100%); opacity: 0; pointer-events: none; }
-        .clock { font-size: 80px; font-weight: 200; margin-bottom: 10px; }
-
-        /* --- 視窗通用樣式 --- */
-        .window {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
-            width: 80%; height: 75%; background: var(--glass-thick); backdrop-filter: blur(30px);
-            border: var(--border); border-radius: 12px; display: none; flex-direction: column;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5); z-index: 100; transition: 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+        /* --- 動態背景 --- */
+        #wallpaper {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
+            background: linear-gradient(-45deg, var(--bg-dark), var(--bg-medium), var(--bg-light), #1a1a2e);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
         }
-        .window.active { display: flex; transform: translate(-50%, -50%) scale(1); }
-        .win-header { height: 45px; display: flex; align-items: center; padding: 0 15px; border-bottom: var(--border); cursor: move; }
-        .win-ctrl { display: flex; gap: 8px; margin-left: auto; }
-        .ctrl-dot { width: 12px; height: 12px; border-radius: 50%; cursor: pointer; }
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
 
-        /* --- 檔案總管專屬 --- */
-        .explorer-main { flex: 1; display: flex; overflow: hidden; }
-        .sidebar { width: 200px; border-right: var(--border); padding: 15px; background: rgba(0,0,0,0.2); }
-        .side-item { padding: 8px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 5px; font-size: 14px; }
-        .side-item:hover { background: var(--glass); }
-        .side-item.active { background: var(--glass); border-left: 3px solid var(--accent); }
+        /* --- 通用毛玻璃類別 --- */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow);
+            border-radius: 12px;
+        }
 
-        .file-view { flex: 1; padding: 0; overflow-y: auto; display: flex; flex-direction: column; }
-        .file-table-header { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; padding: 10px 20px; border-bottom: var(--border); font-size: 12px; color: var(--text-dim); }
-        .file-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; padding: 12px 20px; font-size: 14px; border-bottom: rgba(255,255,255,0.05) 1px solid; cursor: pointer; transition: 0.2s; }
-        .file-row:hover { background: var(--glass); }
-        .file-info { display: flex; align-items: center; gap: 10px; }
-        .file-icon { font-size: 20px; }
-
-        /* --- 工作列 --- */
-        .taskbar { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); width: auto; padding: 5px 15px; height: 55px; background: var(--glass); backdrop-filter: blur(15px); border: var(--border); border-radius: 15px; display: flex; align-items: center; gap: 15px; z-index: 900; }
-        .task-icon { width: 40px; height: 40px; border-radius: 8px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; font-size: 24px; }
-        .task-icon:hover { background: var(--glass); transform: translateY(-3px); }
-
-        /* 通用按鈕 */
-        .btn { background: var(--accent); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; }
-        .btn:hover { filter: brightness(1.2); }
+        /* --- 1. 登入/註冊頁面 --- */
+        #login-screen {
+            display: flex; justify-content: center; align-items: center; height: 100%; width: 100%;
+            flex-direction: column; transition: opacity 0.5s;
+        }
+        .auth-card {
+            width: 400px; padding: 40px; text-align: center; position: relative; overflow: hidden;
+        }
+        .auth-card h2 { margin-bottom: 20px; font-weight: 300; letter-spacing: 2px; text-transform: uppercase; }
+        .input-group { margin-bottom: 20px; text-align: left; }
+        .input-group label { display: block; font-size: 12px; margin-bottom: 5px; color: var(--text-muted); }
+        .input-group input {
+            width: 100%; padding: 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.3); color: white; outline: none; transition: 0.3s;
+        }
+        .input-group input:focus { border-color: var(--accent-color); box-shadow: 0 0 10px var(--accent-color); }
         
-        #toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; opacity: 0; transition: 0.3s; z-index: 3000; }
+        .btn-primary {
+            width: 100%; padding: 12px; border: none; border-radius: 6px;
+            background: linear-gradient(90deg, var(--accent-secondary), var(--accent-color));
+            color: white; font-weight: bold; cursor: pointer; transition: 0.3s;
+            box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3);
+        }
+        .btn-primary:active { transform: scale(0.98); }
+        .auth-switch { margin-top: 15px; font-size: 12px; color: var(--accent-color); cursor: pointer; text-decoration: underline; }
+
+        /* --- 2. 歡迎頁面 (Windows 11 風格) --- */
+        #welcome-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(20px); z-index: 1000;
+        }
+        .spinner {
+            width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.1);
+            border-top: 4px solid var(--accent-color); border-radius: 50%;
+            animation: spin 1s linear infinite; margin-bottom: 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- 3. 桌面環境 --- */
+        #desktop { display: none; width: 100%; height: 100%; position: relative; overflow: hidden; }
+        
+        /* 桌面圖示 */
+        .desktop-icons {
+            display: flex; flex-direction: column; flex-wrap: wrap; 
+            padding: 20px; height: calc(100% - 60px); align-content: flex-start;
+        }
+        .d-icon {
+            width: 80px; height: 90px; margin: 10px; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; cursor: pointer;
+            border-radius: 8px; transition: 0.2s;
+        }
+        .d-icon:hover { background: rgba(255,255,255,0.1); }
+        .d-icon-img { font-size: 32px; margin-bottom: 5px; filter: drop-shadow(0 0 5px rgba(0,210,255,0.5)); }
+        .d-icon-text { font-size: 12px; text-shadow: 0 1px 3px black; text-align: center; }
+
+        /* 工作列 */
+        #taskbar {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 50px;
+            background: rgba(20, 20, 30, 0.85); backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255,255,255,0.1); display: flex;
+            justify-content: center; align-items: center; gap: 15px; z-index: 9000;
+        }
+        .task-icon {
+            width: 40px; height: 40px; border-radius: 6px; display: flex;
+            align-items: center; justify-content: center; font-size: 20px;
+            cursor: pointer; transition: 0.2s; position: relative;
+        }
+        .task-icon:hover { background: rgba(255,255,255,0.15); transform: translateY(-2px); }
+        .task-icon.active::after {
+            content: ''; position: absolute; bottom: 2px; width: 15px; height: 3px;
+            background: var(--accent-color); border-radius: 2px;
+        }
+
+        /* --- 4. 視窗系統 --- */
+        .window {
+            position: absolute; top: 50px; left: 50px; width: 800px; height: 500px;
+            display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            animation: winOpen 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            resize: both; overflow: hidden; min-width: 300px; min-height: 200px;
+        }
+        @keyframes winOpen { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .title-bar {
+            height: 32px; background: rgba(0,0,0,0.2); display: flex;
+            align-items: center; justify-content: space-between; padding: 0 10px; cursor: move;
+        }
+        .win-controls span {
+            display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-left: 8px; cursor: pointer;
+        }
+        .close-btn { background: #ff5f56; } .max-btn { background: #27c93f; } .min-btn { background: #ffbd2e; }
+
+        /* --- 5. 應用程式內容 --- */
+        
+        /* IDE 樣式 */
+        .ide-container { display: flex; flex: 1; height: 100%; position: relative; }
+        .editor-pane { flex: 1; display: flex; flex-direction: column; background: rgba(30,30,40, 0.9); }
+        .preview-pane { flex: 1; background: white; position: relative; }
+        
+        .ide-toolbar {
+            height: 40px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; padding: 0 10px;
+            background: rgba(0,0,0,0.2);
+        }
+        .ide-btn {
+            background: transparent; border: 1px solid var(--accent-secondary); color: var(--accent-color);
+            padding: 4px 12px; border-radius: 4px; font-size: 12px; margin-right: 10px; cursor: pointer;
+        }
+        .ide-btn:hover { background: var(--accent-secondary); color: white; box-shadow: 0 0 8px var(--accent-secondary); }
+        
+        textarea#code-input {
+            width: 100%; flex: 1; background: transparent; color: #d4d4d4; border: none;
+            padding: 10px; font-family: 'Consolas', monospace; font-size: 14px; resize: none; outline: none;
+        }
+        
+        /* 拖曳調整條 */
+        .resizer { width: 5px; background: rgba(0,0,0,0.5); cursor: col-resize; z-index: 10; }
+
+        /* 檔案總管樣式 */
+        .explorer-container { flex: 1; display: flex; flex-direction: column; background: rgba(25,25,35,0.95); color: white; }
+        .explorer-toolbar { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; gap: 10px; }
+        .file-list-header { display: flex; padding: 8px 20px; background: rgba(255,255,255,0.05); font-size: 12px; color: #aaa; }
+        .col-name { flex: 2; } .col-date { flex: 1; } .col-type { flex: 1; } .col-size { flex: 0.5; text-align: right; }
+        
+        .file-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .file-item {
+            display: flex; padding: 10px 20px; align-items: center; border-radius: 4px; cursor: pointer;
+            font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.02);
+        }
+        .file-item:hover { background: var(--win11-hover); }
+        .file-icon { margin-right: 10px; color: var(--accent-color); }
+
+        /* 隱藏原生上傳 input */
+        #upload-input { display: none; }
     </style>
 </head>
 <body>
 
-    <div id="bg-canvas"></div>
+    <div id="wallpaper"></div>
 
-    <div id="lock-screen" class="full-screen-overlay" onclick="ui.unlock()">
-        <div class="clock" id="lock-time">00:00</div>
-        <div id="lock-date">2月15日 星期日</div>
-        <p style="margin-top: 50px; opacity: 0.6;">點擊以進入系統</p>
-    </div>
-
-    <div id="win-explorer" class="window">
-        <div class="win-header">
-            <span style="font-size: 13px;">📁 檔案總管</span>
-            <div class="win-ctrl">
-                <button class="btn" style="padding: 4px 10px; background: transparent;" onclick="fs.triggerUpload()">+ 上傳</button>
-                <div class="ctrl-dot" style="background: #ff5f56;" onclick="ui.close('explorer')"></div>
-            </div>
-        </div>
-        <div class="explorer-main">
-            <div class="sidebar">
-                <div class="side-item active">🏠 首頁</div>
-                <div class="side-item">📄 文件</div>
-                <div class="side-item">📥 下載</div>
-                <div class="side-item">🖼️ 圖片</div>
-            </div>
-            <div class="file-view">
-                <div class="file-table-header">
-                    <span>名稱</span>
-                    <span>修改日期</span>
-                    <span>類型</span>
-                    <span>大小</span>
+    <div id="login-screen">
+        <div class="auth-card glass-panel">
+            <h2 id="auth-title">WebOS <span style="color:var(--accent-color)">Pro</span></h2>
+            <div id="login-form">
+                <div class="input-group">
+                    <label>帳號 (Username)</label>
+                    <input type="text" id="l-user" placeholder="輸入用戶名">
                 </div>
-                <div id="file-list">
-                    </div>
+                <div class="input-group">
+                    <label>密碼 (Password)</label>
+                    <input type="password" id="l-pass" placeholder="輸入密碼">
+                </div>
+                <button class="btn-primary" onclick="handleLogin()">登入系統</button>
+                <div class="auth-switch" onclick="toggleAuthMode()">沒有帳號？註冊一個</div>
+            </div>
+
+            <div id="register-form" style="display:none;">
+                <div class="input-group">
+                    <label>設定新帳號</label>
+                    <input type="text" id="r-user" placeholder="新用戶名">
+                </div>
+                <div class="input-group">
+                    <label>設定密碼</label>
+                    <input type="password" id="r-pass" placeholder="密碼">
+                </div>
+                <button class="btn-primary" onclick="handleRegister()">立即註冊</button>
+                <div class="auth-switch" onclick="toggleAuthMode()">返回登入</div>
             </div>
         </div>
     </div>
 
-    <input type="file" id="file-input" style="display:none" onchange="fs.handleUpload(this)">
-
-    <div class="taskbar">
-        <div class="task-icon" onclick="ui.toggle('explorer')">📁</div>
-        <div class="task-icon">🌐</div>
-        <div class="task-icon">⚙️</div>
+    <div id="welcome-screen">
+        <div class="spinner"></div>
+        <h2 style="font-weight: 300;">歡迎回來, <span id="welcome-user">User</span></h2>
     </div>
 
-    <div id="toast"></div>
+    <div id="desktop">
+        <div class="desktop-icons">
+            <div class="d-icon" onclick="openApp('ide')">
+                <div class="d-icon-img">💻</div>
+                <div class="d-icon-text">Code IDE</div>
+            </div>
+            <div class="d-icon" onclick="openApp('explorer')">
+                <div class="d-icon-img">📁</div>
+                <div class="d-icon-text">檔案總管</div>
+            </div>
+        </div>
+
+        <div id="windows-area"></div>
+
+        <div id="taskbar">
+            <div class="task-icon" style="background:linear-gradient(135deg, #00d2ff, #3a7bd5); color:white;" title="Start">❖</div>
+            <div class="task-icon" onclick="openApp('ide')" title="IDE">💻</div>
+            <div class="task-icon" onclick="openApp('explorer')" title="Files">📁</div>
+            <div style="flex:1"></div>
+            <div style="color:white; font-size:12px; margin-right:20px;" id="clock">12:00 PM</div>
+        </div>
+    </div>
+
+    <input type="file" id="upload-input" onchange="processUpload(this)">
 
     <script>
-        // --- 核心系統管理 ---
-        const ui = {
-            unlock() { document.getElementById('lock-screen').classList.add('hidden'); },
-            toggle(id) { 
-                const win = document.getElementById('win-' + id);
-                win.style.display = (win.style.display === 'flex') ? 'none' : 'flex';
-                if(win.style.display === 'flex') {
-                    win.classList.add('active');
-                    if(id === 'explorer') fs.render();
-                }
-            },
-            close(id) { document.getElementById('win-' + id).style.display = 'none'; },
-            showToast(msg) {
-                const t = document.getElementById('toast');
-                t.innerText = msg; t.style.opacity = 1;
-                setTimeout(() => t.style.opacity = 0, 2000);
-            }
+        /* --- 系統狀態管理 --- */
+        const state = {
+            users: JSON.parse(localStorage.getItem('webOS_users')) || [],
+            currentUser: null,
+            fileSystem: [] // 當前用戶的檔案 {name, size, type, date, content}
         };
 
-        // --- 檔案系統管理 (Win11 邏輯) ---
-        const fs = {
-            dbName: 'nebula_vfs',
-            
-            // 取得所有檔案
-            getAll() {
-                return JSON.parse(localStorage.getItem(this.dbName) || '[]');
-            },
-
-            // 觸發上傳
-            triggerUpload() { document.getElementById('file-input').click(); },
-
-            // 處理上傳並計算元數據
-            handleUpload(input) {
-                const file = input.files[0];
-                if(!file) return;
-
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const files = this.getAll();
-                    const newFile = {
-                        id: Date.now(),
-                        name: file.name,
-                        type: file.name.split('.').pop().toUpperCase(),
-                        size: file.size, // 原始容量(Bytes)
-                        lastModified: new Date().toLocaleString(),
-                        content: e.target.result
-                    };
-                    
-                    files.push(newFile);
-                    localStorage.setItem(this.dbName, JSON.stringify(files));
-                    ui.showToast(`上傳成功: ${file.name}`);
-                    this.render();
-                };
-                reader.readAsText(file); // 這裡預設讀取文本，圖片可改 readAsDataURL
-                input.value = '';
-            },
-
-            // 格式化容量
-            formatSize(bytes) {
-                if (bytes === 0) return '0 Bytes';
-                const k = 1024;
-                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-            },
-
-            // 取得圖示
-            getIcon(type) {
-                const icons = { 'HTML': '🌐', 'CSS': '🎨', 'JS': '📜', 'TXT': '📄', 'PNG': '🖼️', 'JPG': '🖼️' };
-                return icons[type] || '📄';
-            },
-
-            // 渲染檔案清單 (模擬 Windows 11 表格視圖)
-            render() {
-                const list = document.getElementById('file-list');
-                const files = this.getAll();
-                list.innerHTML = '';
-
-                if(files.length === 0) {
-                    list.innerHTML = `<div style="text-align:center; padding:50px; color:gray;">資料夾是空的</div>`;
-                    return;
-                }
-
-                files.forEach(f => {
-                    const row = document.createElement('div');
-                    row.className = 'file-row';
-                    row.innerHTML = `
-                        <div class="file-info">
-                            <span class="file-icon">${this.getIcon(f.type)}</span>
-                            <span>${f.name}</span>
-                        </div>
-                        <div style="color:var(--text-dim)">${f.lastModified}</div>
-                        <div style="color:var(--text-dim)">${f.type} 檔案</div>
-                        <div style="color:var(--text-dim)">${this.formatSize(f.size)}</div>
-                    `;
-                    row.onclick = () => ui.showToast(`開啟檔案: ${f.name} (容量: ${this.formatSize(f.size)})`);
-                    list.appendChild(row);
-                });
-            }
+        // DOM 元素
+        const screens = {
+            login: document.getElementById('login-screen'),
+            welcome: document.getElementById('welcome-screen'),
+            desktop: document.getElementById('desktop')
         };
+        const windowsArea = document.getElementById('windows-area');
 
-        // 更新時間
-        function updateClock() {
-            const now = new Date();
-            document.getElementById('lock-time').innerText = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+        /* --- 1. 認證系統邏輯 --- */
+        let isLoginMode = true;
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            document.getElementById('login-form').style.display = isLoginMode ? 'block' : 'none';
+            document.getElementById('register-form').style.display = isLoginMode ? 'none' : 'block';
+            document.getElementById('auth-title').innerHTML = isLoginMode ? 'WebOS <span style="color:var(--accent-color)">Pro</span>' : '建立 <span style="color:var(--accent-color)">帳戶</span>';
         }
-        setInterval(updateClock, 1000);
-        updateClock();
 
+        function handleRegister() {
+            const user = document.getElementById('r-user').value;
+            const pass = document.getElementById('r-pass').value;
+            if(!user || !pass) return alert('請填寫完整資訊');
+            
+            if(state.users.find(u => u.username === user)) return alert('用戶名已存在');
+
+            const newUser = { username: user, password: pass, files: [] };
+            state.users.push(newUser);
+            saveUsers();
+            alert('註冊成功！請登入');
+            toggleAuthMode();
+        }
+
+        function handleLogin() {
+            const user = document.getElementById('l-user').value;
+            const pass = document.getElementById('l-pass').value;
+            
+            const foundUser = state.users.find(u => u.username === user && u.password === pass);
+            
+            if(foundUser) {
+                state.currentUser = foundUser;
+                state.fileSystem = foundUser.files || [];
+                enterDesktop();
+            } else {
+                alert('帳號或密碼錯誤');
+            }
+        }
+
+        function saveUsers() {
+            // 如果當前有登入，先更新當前用戶的檔案到大陣列
+            if(state.currentUser) {
+                const idx = state.users.findIndex(u => u.username === state.currentUser.username);
+                if(idx !== -1) state.users[idx].files = state.fileSystem;
+            }
+            localStorage.setItem('webOS_users', JSON.stringify(state.users));
+        }
+
+        function enterDesktop() {
+            screens.login.style.opacity = 0;
+            setTimeout(() => {
+                screens.login.style.display = 'none';
+                screens.welcome.style.display = 'flex';
+                document.getElementById('welcome-user').innerText = state.currentUser.username;
+                
+                setTimeout(() => {
+                    screens.welcome.style.display = 'none';
+                    screens.desktop.style.display = 'block';
+                    screens.desktop.style.animation = 'winOpen 0.5s';
+                }, 2000);
+            }, 500);
+        }
+
+        /* --- 2. 視窗管理系統 --- */
+        let zIndexCounter = 100;
+
+        function createWindow(appId, title, contentHTML, width = 800, height = 500) {
+            const win = document.createElement('div');
+            win.className = 'window glass-panel';
+            win.style.width = width + 'px';
+            win.style.height = height + 'px';
+            win.style.zIndex = ++zIndexCounter;
+            
+            // 隨機一點位置讓多個視窗錯開
+            win.style.top = (50 + (zIndexCounter % 10) * 20) + 'px';
+            win.style.left = (50 + (zIndexCounter % 10) * 20) + 'px';
+
+            win.innerHTML = `
+                <div class="title-bar" onmousedown="startDrag(event, this.parentElement)">
+                    <div style="font-size:12px; font-weight:bold;">${title}</div>
+                    <div class="win-controls">
+                        <span class="min-btn"></span>
+                        <span class="max-btn" onclick="maximizeWindow(this.parentElement.parentElement.parentElement)"></span>
+                        <span class="close-btn" onclick="closeWindow(this.parentElement.parentElement.parentElement)"></span>
+                    </div>
+                </div>
+                <div style="flex:1; overflow:hidden; display:flex; flex-direction:column;">
+                    ${contentHTML}
+                </div>
+            `;
+            
+            win.onmousedown = () => win.style.zIndex = ++zIndexCounter; // 點擊置頂
+            windowsArea.appendChild(win);
+            return win;
+        }
+
+        function closeWindow(win) { win.remove(); }
+        
+        function maximizeWindow(win) {
+            if(win.dataset.maximized) {
+                win.style.top = win.dataset.oldTop;
+                win.style.left = win.dataset.oldLeft;
+                win.style.width = win.dataset.oldWidth;
+                win.style.height = win.dataset.oldHeight;
+                delete win.dataset.maximized;
+            } else {
+                win.dataset.oldTop = win.style.top;
+                win.dataset.oldLeft = win.style.left;
+                win.dataset.oldWidth = win.style.width;
+                win.dataset.oldHeight = win.style.height;
+                
+                win.style.top = '0';
+                win.style.left = '0';
+                win.style.width = '100%';
+                win.style.height = 'calc(100% - 50px)'; // 留工作列空間
+                win.dataset.maximized = true;
+            }
+        }
+
+        // 簡單拖曳邏輯
+        let dragObj = null;
+        let offsetX, offsetY;
+        function startDrag(e, win) {
+            if(win.dataset.maximized) return;
+            dragObj = win;
+            offsetX = e.clientX - win.offsetLeft;
+            offsetY = e.clientY - win.offsetTop;
+            document.addEventListener('mousemove', doDrag);
+            document.addEventListener('mouseup', stopDrag);
+        }
+        function doDrag(e) {
+            if(!dragObj) return;
+            dragObj.style.left = (e.clientX - offsetX) + 'px';
+            dragObj.style.top = (e.clientY - offsetY) + 'px';
+        }
+        function stopDrag() {
+            dragObj = null;
+            document.removeEventListener('mousemove', doDrag);
+            document.removeEventListener('mouseup', stopDrag);
+        }
+
+        /* --- 3. 應用程式邏輯 --- */
+        function openApp(appType) {
+            if (appType === 'ide') openIDE();
+            if (appType === 'explorer') openExplorer();
+        }
+
+        // IDE 應用
+        function openIDE() {
+            const ideHTML = `
+                <div class="ide-container">
+                    <div class="editor-pane" id="editor-pane">
+                        <div class="ide-toolbar">
+                            <button class="ide-btn" onclick="runCode(this)">▶ 執行 (Run)</button>
+                            <button class="ide-btn" onclick="saveCurrentFile()">💾 儲存</button>
+                            <span style="font-size:12px; color:#aaa; margin-left:10px;">index.html</span>
+                        </div>
+                        <textarea id="code-input" spellcheck="false" placeholder="在此輸入 HTML/CSS/JS 代碼...">
+<style>
+  body { background: #111; color: #0ff; font-family: sans-serif; display: grid; place-items: center; height: 100vh; }
+  h1 { font-size: 3em; text-shadow: 0 0 20px #0ff; }
+</style>
+<h1>Hello WebOS!</h1>
+<script>
+  console.log('IDE Ready');
+<\/script>
+                        </textarea>
+                    </div>
+                    <div class="resizer" id="dragMe"></div>
+                    <div class="preview-pane">
+                        <iframe id="preview-frame" style="width:100%; height:100%; border:none; background:white;"></iframe>
+                    </div>
+                </div>
+            `;
+            const win = createWindow('ide', 'WebOS Studio Code', ideHTML, 900, 600);
+            
+            // 初始化 IDE 拖拉功能
+            setTimeout(() => initSplitter(win), 100);
+        }
+
+        function runCode(btn) {
+            const win = btn.closest('.window');
+            const code = win.querySelector('#code-input').value;
+            const iframe = win.querySelector('#preview-frame');
+            iframe.srcdoc = code;
+        }
+
+        function saveCurrentFile() {
+            // 簡化版：儲存為 "latest_project.html"
+            const code = document.querySelector('#code-input').value; // 只抓取第一個打開的IDE
+            const file = {
+                name: 'project_' + Date.now() + '.html',
+                size: (new Blob([code]).size / 1024).toFixed(2) + ' KB',
+                type: 'HTML File',
+                date: new Date().toLocaleDateString(),
+                content: code
+            };
+            state.fileSystem.push(file);
+            saveUsers();
+            alert('檔案已儲存到檔案系統！');
+            refreshExplorers(); // 如果有打開檔案總管，刷新它
+        }
+
+        // 檔案總管應用
+        function openExplorer() {
+            const explorerHTML = `
+                <div class="explorer-container">
+                    <div class="explorer-toolbar">
+                        <button class="btn-primary" style="width:auto; padding: 5px 15px;" onclick="triggerUpload()">⬆ 上傳檔案</button>
+                        <button class="ide-btn" style="color:white; border-color:white;" onclick="refreshExplorers()">⟳ 重新整理</button>
+                    </div>
+                    <div class="file-list-header">
+                        <div class="col-name">名稱</div>
+                        <div class="col-date">修改日期</div>
+                        <div class="col-type">類型</div>
+                        <div class="col-size">大小</div>
+                    </div>
+                    <div class="file-list" id="file-list-content">
+                        </div>
+                </div>
+            `;
+            const win = createWindow('explorer', '檔案總管 (File Explorer)', explorerHTML, 700, 450);
+            renderFileList(win.querySelector('#file-list-content'));
+            win.classList.add('explorer-instance'); // 標記以便刷新
+        }
+
+        function triggerUpload() { document.getElementById('upload-input').click(); }
+
+        function processUpload(input) {
+            const file = input.files[0];
+            if(!file) return;
+
+            // 讀取檔案大小和基本資訊
+            const newFile = {
+                name: file.name,
+                size: (file.size / 1024).toFixed(2) + ' KB',
+                type: file.type || 'Unknown',
+                date: new Date().toLocaleDateString(),
+                content: null // 本地存儲限制，大檔案只存元數據
+            };
+
+            // 如果是文本文件，嘗試讀取內容以便IDE編輯
+            if(file.type.includes('text') || file.name.endsWith('.html') || file.name.endsWith('.js') || file.name.endsWith('.css')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    newFile.content = e.target.result;
+                    finalizeUpload(newFile);
+                };
+                reader.readAsText(file);
+            } else {
+                finalizeUpload(newFile);
+            }
+            input.value = ''; // 重置 input
+        }
+
+        function finalizeUpload(fileObj) {
+            state.fileSystem.push(fileObj);
+            saveUsers();
+            refreshExplorers();
+        }
+
+        function renderFileList(container) {
+            container.innerHTML = '';
+            if(state.fileSystem.length === 0) {
+                container.innerHTML = '<div style="padding:20px; text-align:center; color:#666;">資料夾是空的</div>';
+                return;
+            }
+
+            state.fileSystem.forEach(file => {
+                const div = document.createElement('div');
+                div.className = 'file-item';
+                div.innerHTML = `
+                    <div class="col-name"><span class="file-icon">📄</span>${file.name}</div>
+                    <div class="col-date">${file.date}</div>
+                    <div class="col-type">${file.type}</div>
+                    <div class="col-size">${file.size}</div>
+                `;
+                // 點擊事件：如果是代碼，可以用IDE打開（這裡簡化處理，只alert）
+                div.onclick = () => {
+                   if(file.content) {
+                       if(confirm('要在 IDE 中打開這個檔案嗎？')) {
+                           openIDE();
+                           // 延遲一點等視窗建立
+                           setTimeout(() => {
+                               const inputs = document.querySelectorAll('#code-input');
+                               inputs[inputs.length-1].value = file.content;
+                           }, 200);
+                       }
+                   } else {
+                       alert('此檔案僅儲存了元數據 (Metadata)，因為不是純文字檔。');
+                   }
+                };
+                container.appendChild(div);
+            });
+        }
+
+        function refreshExplorers() {
+            document.querySelectorAll('.explorer-instance').forEach(win => {
+                renderFileList(win.querySelector('#file-list-content'));
+            });
+        }
+
+        /* --- 4. 工具與分割視窗邏輯 --- */
+        function initSplitter(win) {
+            const resizer = win.querySelector('.resizer');
+            const leftSide = win.querySelector('.editor-pane');
+            const rightSide = win.querySelector('.preview-pane');
+            let x = 0;
+            let leftWidth = 0;
+
+            const mouseDownHandler = function(e) {
+                x = e.clientX;
+                leftWidth = leftSide.getBoundingClientRect().width;
+                document.addEventListener('mousemove', mouseMoveHandler);
+                document.addEventListener('mouseup', mouseUpHandler);
+                // 蓋住 iframe 以免拖曳時卡頓
+                rightSide.style.pointerEvents = 'none'; 
+            };
+
+            const mouseMoveHandler = function(e) {
+                const dx = e.clientX - x;
+                const newWidth = ((leftWidth + dx) * 100) / win.getBoundingClientRect().width;
+                leftSide.style.flex = `0 0 ${newWidth}%`;
+            };
+
+            const mouseUpHandler = function() {
+                rightSide.style.pointerEvents = 'auto';
+                document.removeEventListener('mousemove', mouseMoveHandler);
+                document.removeEventListener('mouseup', mouseUpHandler);
+            };
+
+            resizer.addEventListener('mousedown', mouseDownHandler);
+        }
+
+        // 時鐘
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }, 1000);
+
+        // 初始化
+        if(localStorage.getItem('webOS_users')) {
+            // 已有資料
+        }
     </script>
 </body>
 </html>
