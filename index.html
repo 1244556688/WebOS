@@ -3,30 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Nebula IDE - Tablet Edition</title>
+    <title>Nebula OS - Win11 Style</title>
     <style>
-        /* --- 核心變數與基礎設定 --- */
+        /* --- 核心變數 --- */
         :root {
             --bg-gradient: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-            --glass-bg: rgba(255, 255, 255, 0.05);
-            --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+            --glass-bg: rgba(255, 255, 255, 0.08);
+            --glass-border: 1px solid rgba(255, 255, 255, 0.15);
             --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
             --neon-blue: #00f3ff;
             --neon-purple: #bc13fe;
             --text-main: #ffffff;
-            --text-dim: #a0a0a0;
-            --taskbar-height: 60px;
+            --font-ui: 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
 
         * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
         
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: var(--font-ui);
             overflow: hidden;
             background: var(--bg-gradient);
             background-size: 400% 400%;
-            animation: gradientBG 15s ease infinite;
+            animation: gradientBG 20s ease infinite;
             color: var(--text-main);
         }
 
@@ -36,327 +35,186 @@
             100% { background-position: 0% 50%; }
         }
 
-        /* --- 通用元件樣式 --- */
+        /* --- 1. Windows 11 風格鎖定/歡迎畫面 --- */
+        #lock-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.1); /* 輕微遮罩，透出背景 */
+            backdrop-filter: blur(5px);
+            z-index: 2000;
+            display: flex; flex-direction: column; align-items: center;
+            padding-top: 15vh;
+            transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s;
+            cursor: pointer;
+        }
+
+        #lock-screen.slide-up {
+            transform: translateY(-100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .lock-time { font-size: 5rem; font-weight: 200; letter-spacing: -2px; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        .lock-date { font-size: 1.5rem; font-weight: 400; margin-top: 10px; }
+        .lock-hint {
+            position: absolute; bottom: 50px;
+            font-size: 1rem; opacity: 0.8;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
+            40% {transform: translateY(-10px);}
+            60% {transform: translateY(-5px);}
+        }
+
+        /* --- 通用 UI 元件 --- */
         .glass-panel {
             background: var(--glass-bg);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border: var(--glass-border);
             box-shadow: var(--glass-shadow);
-            border-radius: 16px;
+            border-radius: 12px;
         }
 
         .btn {
             background: rgba(255,255,255,0.1);
             border: 1px solid rgba(255,255,255,0.2);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 1rem;
-            outline: none;
+            color: white; padding: 10px 20px;
+            border-radius: 6px; cursor: pointer;
+            transition: all 0.2s; font-size: 0.95rem; outline: none;
         }
-
-        .btn:hover {
-            background: rgba(255,255,255,0.2);
-            box-shadow: 0 0 15px var(--neon-blue);
-            border-color: var(--neon-blue);
-        }
-
-        .btn:active { transform: scale(0.95); }
-
-        .btn-primary {
-            background: linear-gradient(90deg, #00c6ff, #0072ff);
-            border: none;
-        }
+        .btn:hover { background: rgba(255,255,255,0.25); border-color: var(--neon-blue); }
+        .btn:active { transform: scale(0.96); }
+        .btn-primary { background: var(--neon-blue); color: #000; border: none; font-weight: bold; }
+        .btn-primary:hover { background: #5cf7ff; box-shadow: 0 0 15px var(--neon-blue); }
 
         input {
-            background: rgba(0,0,0,0.3);
-            border: 1px solid rgba(255,255,255,0.1);
-            padding: 12px;
-            border-radius: 8px;
-            color: white;
-            width: 100%;
-            margin-bottom: 15px;
-            outline: none;
-            transition: 0.3s;
+            background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1);
+            padding: 12px; border-radius: 6px; color: white; width: 100%;
+            margin-bottom: 15px; outline: none; transition: 0.3s;
         }
+        input:focus { border-color: var(--neon-blue); background: rgba(0,0,0,0.6); }
 
-        input:focus {
-            border-color: var(--neon-purple);
-            box-shadow: 0 0 10px rgba(188, 19, 254, 0.3);
-        }
-
-        /* --- 登入/註冊頁面 --- */
+        /* --- 登入畫面 --- */
         #auth-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             display: flex; justify-content: center; align-items: center;
             z-index: 1000;
+            opacity: 0; transition: opacity 1s 0.5s; /* 延遲顯示，等鎖定畫面滑上去 */
+            pointer-events: none;
         }
+        #auth-screen.visible { opacity: 1; pointer-events: all; }
 
-        .auth-box {
-            width: 380px;
-            padding: 40px;
-            text-align: center;
-            animation: floatUp 0.8s ease-out;
-        }
-
-        @keyframes floatUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .logo {
-            font-size: 2rem;
-            font-weight: bold;
-            margin-bottom: 20px;
-            background: linear-gradient(to right, var(--neon-blue), var(--neon-purple));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 20px rgba(0, 243, 255, 0.3);
+        .auth-box { width: 360px; padding: 40px; text-align: center; }
+        .user-avatar {
+            width: 80px; height: 80px; background: #ddd; border-radius: 50%;
+            margin: 0 auto 20px; border: 3px solid rgba(255,255,255,0.3);
+            background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
 
         /* --- 桌面環境 --- */
         #desktop {
-            display: none; /* 登入後顯示 */
-            width: 100%; height: 100%;
-            position: relative;
+            display: none; width: 100%; height: 100%; position: relative;
         }
 
         .desktop-icons {
-            padding: 20px;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, 100px);
-            gap: 20px;
+            padding: 20px; display: flex; flex-direction: column; flex-wrap: wrap; height: 90%; align-content: flex-start; gap: 10px;
         }
 
         .icon {
+            width: 80px; padding: 10px; border-radius: 8px;
             display: flex; flex-direction: column; align-items: center;
-            cursor: pointer;
-            padding: 10px;
-            border-radius: 8px;
-            transition: 0.2s;
+            cursor: pointer; transition: 0.2s; text-align: center;
         }
-
-        .icon:hover { background: rgba(255,255,255,0.1); }
-        .icon:active { transform: scale(0.95); }
-
+        .icon:hover { background: rgba(255,255,255,0.15); }
         .icon-img {
-            width: 48px; height: 48px;
-            background: linear-gradient(135deg, #00c6ff, #0072ff);
-            border-radius: 12px;
-            margin-bottom: 8px;
+            width: 48px; height: 48px; border-radius: 10px;
             display: flex; align-items: center; justify-content: center;
-            font-size: 24px;
+            font-size: 24px; margin-bottom: 5px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
         }
-
-        .icon-text { font-size: 0.9rem; text-shadow: 0 1px 2px black; }
+        .icon-text { font-size: 0.8rem; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8); line-height: 1.2; }
 
         /* --- 工作列 --- */
         .taskbar {
-            position: absolute; bottom: 0; left: 0; width: 100%;
-            height: var(--taskbar-height);
-            display: flex; align-items: center; justify-content: center;
-            gap: 15px;
-            z-index: 900;
-            border-radius: 0;
-            border-top: var(--glass-border);
-        }
-
-        .taskbar-btn {
-            width: 40px; height: 40px;
-            border-radius: 8px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 20px;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-        
-        .taskbar-btn:hover, .taskbar-btn.active {
-            background: rgba(255,255,255,0.2);
-            box-shadow: 0 0 10px var(--neon-blue);
+            position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 600px; height: 50px;
+            display: flex; align-items: center; justify-content: center; gap: 15px;
+            z-index: 900; border-radius: 12px;
         }
 
         /* --- IDE 視窗 --- */
         #ide-window {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%) scale(0.9);
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%) scale(0.95);
             width: 90%; height: 85%;
             display: flex; flex-direction: column;
-            opacity: 0; pointer-events: none;
-            transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+            opacity: 0; pointer-events: none; transition: 0.3s cubic-bezier(0.19, 1, 0.22, 1);
             z-index: 100;
         }
+        #ide-window.open { opacity: 1; pointer-events: all; transform: translate(-50%, -50%) scale(1); }
+        #ide-window.fullscreen { width: 100%; height: 100%; top:0; left:0; transform: none; border-radius: 0; border: none; }
 
-        #ide-window.open {
-            opacity: 1; pointer-events: all;
-            transform: translate(-50%, -50%) scale(1);
-        }
-
-        #ide-window.fullscreen {
-            width: 100%; height: 100%;
-            border-radius: 0;
-            top: 0; left: 0;
-            transform: none;
-            border: none;
-        }
-
-        /* IDE 頂部標題列 */
-        .window-header {
-            height: 40px;
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 0 15px;
-            border-bottom: var(--glass-border);
-            cursor: default;
-        }
-
-        .window-title { font-size: 0.9rem; font-weight: bold; letter-spacing: 1px; }
-
-        .window-controls { display: flex; gap: 8px; }
-        .win-btn { width: 12px; height: 12px; border-radius: 50%; cursor: pointer; }
-        .win-close { background: #ff5f56; }
-        .win-max { background: #27c93f; }
-        .win-min { background: #ffbd2e; }
-
-        /* IDE 工具列 */
-        .ide-toolbar {
-            height: 50px;
-            display: flex; align-items: center;
-            padding: 0 10px;
-            border-bottom: var(--glass-border);
-            gap: 10px;
-        }
-
-        /* IDE 主體 (分割畫面) */
-        .ide-body {
-            flex: 1;
-            display: flex;
-            overflow: hidden;
-            position: relative;
-        }
-
-        /* 左側編輯區 */
-        .editor-pane {
-            flex: 1;
-            display: flex; flex-direction: column;
-            min-width: 20%;
-            background: rgba(0, 0, 0, 0.3);
-        }
-
-        .editor-tabs {
-            display: flex;
-            background: rgba(0,0,0,0.2);
-        }
-
-        .tab {
-            padding: 8px 20px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            color: var(--text-dim);
-            border-right: 1px solid rgba(255,255,255,0.05);
-            transition: 0.2s;
-        }
-
-        .tab.active {
-            background: rgba(255,255,255,0.05);
-            color: var(--neon-blue);
-            border-top: 2px solid var(--neon-blue);
-        }
-
+        .ide-toolbar { height: 45px; display: flex; align-items: center; padding: 0 10px; border-bottom: var(--glass-border); gap: 10px; }
+        .ide-body { flex: 1; display: flex; overflow: hidden; position: relative; }
+        
+        .editor-pane { flex: 1; display: flex; flex-direction: column; background: rgba(30,30,30,0.6); }
+        .editor-tabs { display: flex; background: rgba(0,0,0,0.3); }
+        .tab { padding: 8px 15px; cursor: pointer; font-size: 0.8rem; color: #aaa; border-right: 1px solid rgba(255,255,255,0.05); }
+        .tab.active { background: rgba(255,255,255,0.05); color: var(--neon-blue); border-top: 2px solid var(--neon-blue); }
+        
         .code-area {
-            flex: 1;
-            width: 100%;
-            background: transparent;
-            border: none;
-            color: #d4d4d4;
-            padding: 15px;
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 14px;
-            line-height: 1.5;
-            resize: none;
-            outline: none;
-            user-select: text; /* 允許選取文字 */
-        }
-        
-        .code-area::selection { background: rgba(0, 243, 255, 0.3); }
-
-        /* 分割線 */
-        .resizer {
-            width: 6px;
-            background: rgba(255,255,255,0.1);
-            cursor: col-resize;
-            display: flex; align-items: center; justify-content: center;
-            transition: background 0.2s;
-            z-index: 10;
-        }
-        .resizer:hover, .resizer.dragging { background: var(--neon-purple); }
-
-        /* 右側預覽區 */
-        .preview-pane {
-            flex: 1;
-            background: white;
-            position: relative;
-            min-width: 20%;
+            flex: 1; width: 100%; background: transparent; border: none;
+            color: #d4d4d4; padding: 15px; font-family: 'Consolas', monospace; font-size: 14px;
+            resize: none; outline: none; line-height: 1.5;
         }
 
-        iframe { width: 100%; height: 100%; border: none; }
+        .preview-pane { flex: 1; background: white; border-left: var(--glass-border); }
+        iframe { width: 100%; height: 100%; border: none; pointer-events: none; } /* 預設 pointer-events none 防止拖拉被吃 */
+        .preview-pane:hover iframe { pointer-events: auto; }
 
-        /* 檔案列表 (Modal) */
-        .modal {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6);
-            backdrop-filter: blur(5px);
-            display: none; justify-content: center; align-items: center;
-            z-index: 200;
-        }
-        .modal.show { display: flex; }
-        
-        .file-list {
-            list-style: none; padding: 0; margin: 0;
-            max-height: 200px; overflow-y: auto;
-        }
-        .file-item {
-            padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);
-            cursor: pointer; display: flex; justify-content: space-between;
-        }
-        .file-item:hover { background: rgba(255,255,255,0.1); }
-
-        /* 通知 */
+        /* 通知 Toast */
         .toast {
-            position: fixed; top: 20px; right: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            border: 1px solid var(--neon-blue);
-            color: white; padding: 10px 20px;
-            border-radius: 8px;
-            transform: translateX(150%);
-            transition: transform 0.3s;
-            z-index: 2000;
+            position: fixed; bottom: 80px; right: 20px;
+            background: rgba(30, 30, 30, 0.9); border-left: 4px solid var(--neon-blue);
+            color: white; padding: 15px 25px; border-radius: 4px;
+            transform: translateX(150%); transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            z-index: 3000; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
         }
         .toast.show { transform: translateX(0); }
+
+        /* 隱藏的 Input 用於上傳 */
+        #upload-input { display: none; }
 
     </style>
 </head>
 <body>
 
-    <div id="auth-screen" class="glass-panel" style="border-radius: 0; background: rgba(0,0,0,0.2);">
+    <div id="lock-screen" onclick="app.unlockSystem()">
+        <div class="lock-time" id="clock-time">12:00</div>
+        <div class="lock-date" id="clock-date">1月1日 星期一</div>
+        <div class="lock-hint">點擊或滑動以解鎖</div>
+    </div>
+
+    <div id="auth-screen">
         <div class="glass-panel auth-box">
-            <div class="logo">NEBULA IDE</div>
+            <div class="user-avatar"></div>
+            <h2 id="auth-title">歡迎回來</h2>
+            
             <div id="login-form">
-                <h3 style="margin-top:0">系統登入</h3>
                 <input type="text" id="login-user" placeholder="使用者名稱">
                 <input type="password" id="login-pass" placeholder="密碼">
-                <button class="btn btn-primary" style="width:100%" onclick="app.login()">進入系統</button>
-                <p style="font-size: 0.8rem; margin-top: 15px; cursor: pointer; color: var(--neon-blue);" onclick="app.toggleAuthMode()">還沒有帳號？註冊</p>
+                <button class="btn btn-primary" style="width:100%" onclick="app.login()">登入 →</button>
+                <p style="font-size: 0.8rem; margin-top: 15px; cursor: pointer; opacity:0.7" onclick="app.toggleAuthMode()">沒有帳號？建立新帳戶</p>
             </div>
+
             <div id="register-form" style="display:none;">
-                <h3 style="margin-top:0">創建帳戶</h3>
                 <input type="text" id="reg-user" placeholder="設定使用者名稱">
                 <input type="password" id="reg-pass" placeholder="設定密碼">
-                <button class="btn" style="width:100%; border-color: var(--neon-purple);" onclick="app.register()">註冊並儲存</button>
-                <p style="font-size: 0.8rem; margin-top: 15px; cursor: pointer; color: var(--text-dim);" onclick="app.toggleAuthMode()">返回登入</p>
+                <button class="btn btn-primary" style="width:100%" onclick="app.register()">註冊並登入</button>
+                <p style="font-size: 0.8rem; margin-top: 15px; cursor: pointer; opacity:0.7" onclick="app.toggleAuthMode()">返回登入</p>
             </div>
         </div>
     </div>
@@ -364,110 +222,105 @@
     <div id="desktop">
         <div class="desktop-icons">
             <div class="icon" onclick="app.openIDE()">
-                <div class="icon-img">⚡</div>
+                <div class="icon-img" style="background: linear-gradient(135deg, #667eea, #764ba2);">⚡</div>
                 <div class="icon-text">Nebula IDE</div>
             </div>
+            
             <div class="icon" onclick="app.createNewFilePrompt()">
-                <div class="icon-img" style="background: linear-gradient(135deg, #11998e, #38ef7d);">+</div>
+                <div class="icon-img" style="background: linear-gradient(135deg, #2af598, #009efd);">+</div>
                 <div class="icon-text">新建專案</div>
+            </div>
+
+            <div class="icon" onclick="app.triggerUpload()">
+                <div class="icon-img" style="background: linear-gradient(135deg, #ff9a9e, #fecfef);">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
+                </div>
+                <div class="icon-text">匯入檔案</div>
             </div>
         </div>
 
+        <input type="file" id="upload-input" onchange="app.handleFileUpload(this)">
+
         <div id="ide-window" class="glass-panel">
-            <div class="window-header">
-                <div class="window-title">Nebula Editor - <span id="current-filename">未命名</span></div>
-                <div class="window-controls">
-                    <div class="win-btn win-min" title="最小化" onclick="app.minimizeIDE()"></div>
-                    <div class="win-btn win-max" title="全螢幕" onclick="app.toggleFullscreen()"></div>
-                    <div class="win-btn win-close" title="關閉" onclick="app.closeIDE()"></div>
-                </div>
-            </div>
-
             <div class="ide-toolbar">
-                <button class="btn" onclick="app.showFileList()">📂 開啟</button>
-                <button class="btn" onclick="app.saveFile()">💾 儲存</button>
+                <div style="font-weight:bold; margin-right:15px; color:var(--neon-blue);">NEBULA</div>
+                <span id="current-filename" style="opacity:0.6; font-size:0.9rem;">未命名</span>
                 <div style="flex:1"></div>
+                <button class="btn" onclick="app.saveFile()">💾 儲存</button>
                 <button class="btn btn-primary" onclick="app.runCode()">▶ 執行</button>
+                <button class="btn" onclick="app.closeIDE()" style="background:#ff5f56; width:30px; padding:0; height:30px;">✕</button>
             </div>
 
-            <div class="ide-body" id="ide-body">
-                <div class="editor-pane" id="editor-pane">
+            <div class="ide-body">
+                <div class="editor-pane">
                     <div class="editor-tabs">
                         <div class="tab active" onclick="app.switchTab('html', this)">HTML</div>
                         <div class="tab" onclick="app.switchTab('css', this)">CSS</div>
                         <div class="tab" onclick="app.switchTab('js', this)">JS</div>
                     </div>
-                    <textarea id="code-html" class="code-area" placeholder="" spellcheck="false"></textarea>
-                    <textarea id="code-css" class="code-area" style="display:none;" placeholder="/* CSS Code here */" spellcheck="false"></textarea>
-                    <textarea id="code-js" class="code-area" style="display:none;" placeholder="// JavaScript Code here" spellcheck="false"></textarea>
+                    <textarea id="code-html" class="code-area" placeholder="HTML Code"></textarea>
+                    <textarea id="code-css" class="code-area" style="display:none;" placeholder="CSS Code"></textarea>
+                    <textarea id="code-js" class="code-area" style="display:none;" placeholder="JS Code"></textarea>
                 </div>
-
-                <div class="resizer" id="resizer"></div>
-
-                <div class="preview-pane" id="preview-pane">
+                <div class="preview-pane">
                     <iframe id="preview-frame"></iframe>
                 </div>
             </div>
         </div>
 
         <div class="taskbar glass-panel">
-            <div class="taskbar-btn" title="開始">❖</div>
-            <div class="taskbar-btn" id="taskbar-ide-icon" title="IDE" onclick="app.toggleIDEVisibility()">⚡</div>
+            <div class="icon" style="width:40px; margin:0;" title="開始">❖</div>
+            <div class="icon" style="width:40px; margin:0;" onclick="app.toggleIDE()">⚡</div>
         </div>
-
-        <div id="file-modal" class="modal">
-            <div class="glass-panel" style="width: 300px; padding: 20px;">
-                <h3>我的檔案</h3>
-                <ul id="file-list-ul" class="file-list">
-                    </ul>
-                <div style="margin-top: 20px; text-align: right;">
-                    <button class="btn" onclick="document.getElementById('file-modal').classList.remove('show')">取消</button>
-                    <button class="btn btn-primary" onclick="app.createNewFilePrompt()">新建</button>
-                </div>
-            </div>
-        </div>
-
     </div>
 
-    <div id="toast" class="toast">操作成功</div>
+    <div id="toast" class="toast">訊息提示</div>
 
     <script>
-        /**
-         * Nebula IDE 邏輯核心
-         * 包含：用戶認證、檔案系統(LocalStorage)、IDE操作、UI互動
-         */
         const app = {
             currentUser: null,
             currentFile: null,
-            isResizing: false,
-            
-            // 初始化
+
             init: function() {
-                this.checkSession();
-                this.setupResizer();
-                // 預設代碼範例
-                this.defaultCode = {
-                    html: '<h1>Hello Nebula</h1>\n<p>Welcome to your tablet IDE.</p>\n<button id="demoBtn">Click Me</button>',
-                    css: 'body { font-family: sans-serif; padding: 20px; color: #333; }\nh1 { color: #0072ff; }\nbutton { padding: 10px 20px; background: #0072ff; color: white; border: none; border-radius: 5px; }',
-                    js: 'document.getElementById("demoBtn").addEventListener("click", () => {\n  alert("Button Clicked!");\n});'
-                };
+                this.updateClock();
+                setInterval(() => this.updateClock(), 1000);
+            },
+
+            // --- 鎖定畫面與時間 ---
+            updateClock: function() {
+                const now = new Date();
+                // 補零
+                const h = String(now.getHours()).padStart(2, '0');
+                const m = String(now.getMinutes()).padStart(2, '0');
+                document.getElementById('clock-time').innerText = `${h}:${m}`;
+                
+                const options = { month: 'long', day: 'numeric', weekday: 'long' };
+                document.getElementById('clock-date').innerText = now.toLocaleDateString('zh-TW', options);
+            },
+
+            unlockSystem: function() {
+                document.getElementById('lock-screen').classList.add('slide-up');
+                setTimeout(() => {
+                    document.getElementById('auth-screen').classList.add('visible');
+                }, 300);
             },
 
             // --- 認證系統 ---
-            
             toggleAuthMode: function() {
                 const login = document.getElementById('login-form');
                 const reg = document.getElementById('register-form');
+                const title = document.getElementById('auth-title');
+                
                 if(login.style.display === 'none') {
                     login.style.display = 'block'; reg.style.display = 'none';
+                    title.innerText = '歡迎回來';
                 } else {
                     login.style.display = 'none'; reg.style.display = 'block';
+                    title.innerText = '建立您的帳戶';
                 }
             },
 
-            getUsers: function() {
-                return JSON.parse(localStorage.getItem('nebula_users') || '{}');
-            },
+            getUsers: function() { return JSON.parse(localStorage.getItem('nebula_users') || '{}'); },
 
             register: function() {
                 const u = document.getElementById('reg-user').value.trim();
@@ -477,14 +330,11 @@
                 let users = this.getUsers();
                 if(users[u]) return this.toast('使用者名稱已存在');
 
-                users[u] = p; // 簡單儲存，實際應用應 Hash
+                users[u] = p;
                 localStorage.setItem('nebula_users', JSON.stringify(users));
+                localStorage.setItem(`nebula_files_${u}`, JSON.stringify({})); // 初始化檔案區
                 
-                // 初始化該用戶的檔案存儲
-                localStorage.setItem(`nebula_files_${u}`, JSON.stringify({}));
-                
-                this.toast('註冊成功！請登入');
-                this.toggleAuthMode();
+                this.loginProcess(u);
             },
 
             login: function() {
@@ -493,21 +343,75 @@
                 let users = this.getUsers();
 
                 if(users[u] && users[u] === p) {
-                    this.currentUser = u;
-                    document.getElementById('auth-screen').style.display = 'none';
-                    document.getElementById('desktop').style.display = 'block';
-                    this.toast(`歡迎回來, ${u}`);
+                    this.loginProcess(u);
                 } else {
                     this.toast('帳號或密碼錯誤');
                 }
             },
 
-            checkSession: function() {
-                // 簡單 Session 檢查 (可選)
+            loginProcess: function(user) {
+                this.currentUser = user;
+                document.getElementById('auth-screen').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('auth-screen').style.display = 'none';
+                    document.getElementById('desktop').style.display = 'block';
+                    this.toast(`歡迎進入 Nebula OS, ${user}`);
+                }, 500);
             },
 
-            // --- 檔案系統 (LocalStorage) ---
+            // --- 檔案上傳 (匯入) ---
+            triggerUpload: function() {
+                document.getElementById('upload-input').click();
+            },
 
+            handleFileUpload: function(inputElement) {
+                const file = inputElement.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const content = e.target.result;
+                    const fileName = file.name;
+                    
+                    // 詢問使用者要存成什麼專案名
+                    const projectName = prompt(`檢測到檔案 ${fileName}。\n請為這個新專案命名:`, fileName.split('.')[0]);
+                    
+                    if(projectName) {
+                        this.createProjectFromImport(projectName, fileName, content);
+                    }
+                    // 清空 input 讓同檔名可再次上傳
+                    inputElement.value = '';
+                };
+                reader.readAsText(file);
+            },
+
+            createProjectFromImport: function(projName, originalFileName, content) {
+                let files = this.getUserFiles();
+                
+                // 預設結構
+                let newProject = { html: '', css: '', js: '' };
+                
+                // 簡單判斷檔案類型自動歸位
+                if(originalFileName.endsWith('.html')) {
+                    newProject.html = content;
+                    newProject.css = '/* 匯入的 HTML 專案 */';
+                } else if(originalFileName.endsWith('.css')) {
+                    newProject.html = '<h1>CSS Import Mode</h1>';
+                    newProject.css = content;
+                } else if(originalFileName.endsWith('.js')) {
+                    newProject.html = '<h1>JS Import Mode</h1>';
+                    newProject.js = content;
+                } else {
+                    newProject.html = `\n<pre>${content}</pre>`;
+                }
+
+                files[projName] = newProject;
+                this.saveUserFiles(files);
+                this.toast(`匯入成功: ${projName}`);
+                this.openFile(projName);
+            },
+
+            // --- IDE 與檔案系統 ---
             getUserFiles: function() {
                 return JSON.parse(localStorage.getItem(`nebula_files_${this.currentUser}`) || '{}');
             },
@@ -517,202 +421,103 @@
             },
 
             createNewFilePrompt: function() {
-                const name = prompt("請輸入檔案名稱 (例如: project1):");
+                const name = prompt("新專案名稱:");
                 if(!name) return;
                 
                 let files = this.getUserFiles();
-                if(files[name]) {
-                    this.toast('檔案已存在');
-                    return;
-                }
+                if(files[name]) return this.toast('專案已存在');
 
-                // 建立新檔案
-                files[name] = JSON.parse(JSON.stringify(this.defaultCode)); // Deep copy
+                files[name] = { 
+                    html: '<h1>Hello World</h1>', 
+                    css: 'body { color: #333; padding: 20px; }', 
+                    js: 'console.log("Ready");' 
+                };
                 this.saveUserFiles(files);
                 this.openFile(name);
-                document.getElementById('file-modal').classList.remove('show');
             },
 
             openFile: function(name) {
                 let files = this.getUserFiles();
                 if(!files[name]) return;
-
                 this.currentFile = name;
-                const content = files[name];
                 
-                document.getElementById('code-html').value = content.html;
-                document.getElementById('code-css').value = content.css;
-                document.getElementById('code-js').value = content.js;
-                
+                const data = files[name];
+                document.getElementById('code-html').value = data.html || '';
+                document.getElementById('code-css').value = data.css || '';
+                document.getElementById('code-js').value = data.js || '';
                 document.getElementById('current-filename').innerText = name;
+                
                 this.openIDE();
-                this.runCode(); // 載入後自動執行一次
+                this.runCode();
             },
 
             saveFile: function() {
                 if(!this.currentUser || !this.currentFile) return;
-                
                 let files = this.getUserFiles();
                 files[this.currentFile] = {
                     html: document.getElementById('code-html').value,
                     css: document.getElementById('code-css').value,
                     js: document.getElementById('code-js').value
                 };
-                
                 this.saveUserFiles(files);
-                this.toast('檔案已儲存');
+                this.toast('儲存成功！');
             },
 
-            showFileList: function() {
-                const list = document.getElementById('file-list-ul');
-                list.innerHTML = '';
-                const files = this.getUserFiles();
-                
-                Object.keys(files).forEach(name => {
-                    const li = document.createElement('li');
-                    li.className = 'file-item';
-                    li.innerHTML = `<span>${name}</span> <span>✎</span>`;
-                    li.onclick = () => {
-                        app.openFile(name);
-                        document.getElementById('file-modal').classList.remove('show');
-                    };
-                    list.appendChild(li);
-                });
-                
-                document.getElementById('file-modal').classList.add('show');
-            },
-
-            // --- IDE UI 操作 ---
-
+            // --- 視窗操作 ---
             openIDE: function() {
                 const win = document.getElementById('ide-window');
                 win.classList.add('open');
-                win.style.transform = 'translate(-50%, -50%) scale(1)'; // Reset minimize
+                // 重置可能的最小化狀態
+                win.style.transform = 'translate(-50%, -50%) scale(1)';
                 win.style.opacity = '1';
-                document.getElementById('taskbar-ide-icon').classList.add('active');
             },
 
             closeIDE: function() {
-                // 如果需要確認儲存可以在這裡加
                 document.getElementById('ide-window').classList.remove('open');
-                document.getElementById('taskbar-ide-icon').classList.remove('active');
-                this.currentFile = null;
             },
 
-            minimizeIDE: function() {
+            toggleIDE: function() {
                 const win = document.getElementById('ide-window');
-                win.style.transform = 'translate(-50%, 100%) scale(0.5)';
-                win.style.opacity = '0';
-                // Note: Keep .open class to indicate it's running, just hidden visually
-            },
-            
-            toggleIDEVisibility: function() {
-                const win = document.getElementById('ide-window');
-                if(win.style.opacity === '0' || !win.classList.contains('open')) {
-                    this.openIDE();
+                if(win.classList.contains('open') && win.style.opacity !== '0') {
+                    // 最小化
+                    win.style.transform = 'translate(-50%, 100%) scale(0.5)';
+                    win.style.opacity = '0';
                 } else {
-                    this.minimizeIDE();
+                    // 開啟
+                    this.openIDE();
                 }
             },
 
-            toggleFullscreen: function() {
-                document.getElementById('ide-window').classList.toggle('fullscreen');
-            },
-
-            switchTab: function(type, tabEl) {
-                // UI update
+            switchTab: function(type, el) {
                 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                tabEl.classList.add('active');
+                el.classList.add('active');
                 
-                // Show/Hide textareas
-                document.getElementById('code-html').style.display = 'none';
-                document.getElementById('code-css').style.display = 'none';
-                document.getElementById('code-js').style.display = 'none';
-                
-                document.getElementById(`code-${type}`).style.display = 'block';
+                ['html', 'css', 'js'].forEach(t => {
+                    document.getElementById(`code-${t}`).style.display = (t === type) ? 'block' : 'none';
+                });
             },
 
             runCode: function() {
-                const html = document.getElementById('code-html').value;
-                const css = `<style>${document.getElementById('code-css').value}</style>`;
-                const js = `<script>${document.getElementById('code-js').value}<\/script>`;
+                const h = document.getElementById('code-html').value;
+                const c = `<style>${document.getElementById('code-css').value}</style>`;
+                const j = `<script>${document.getElementById('code-js').value}<\/script>`;
                 
-                const previewFrame = document.getElementById('preview-frame');
-                const previewDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
-                
-                previewDoc.open();
-                previewDoc.write(html + css + js);
-                previewDoc.close();
-                
-                // 簡單閃爍效果提示已更新
-                const pPane = document.getElementById('preview-pane');
-                pPane.style.opacity = '0.5';
-                setTimeout(() => pPane.style.opacity = '1', 150);
+                const frame = document.getElementById('preview-frame');
+                const doc = frame.contentDocument || frame.contentWindow.document;
+                doc.open();
+                doc.write(h + c + j);
+                doc.close();
             },
-
-            // --- 工具與事件 ---
 
             toast: function(msg) {
                 const t = document.getElementById('toast');
                 t.innerText = msg;
                 t.classList.add('show');
                 setTimeout(() => t.classList.remove('show'), 3000);
-            },
-
-            setupResizer: function() {
-                const resizer = document.getElementById('resizer');
-                const leftSide = document.getElementById('editor-pane');
-                const rightSide = document.getElementById('preview-pane');
-                const container = document.getElementById('ide-body');
-
-                const onMove = (e) => {
-                    if (!this.isResizing) return;
-                    
-                    // 獲取 X 座標 (相容 Touch 與 Mouse)
-                    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                    
-                    // 計算百分比
-                    const containerRect = container.getBoundingClientRect();
-                    const newWidth = ((clientX - containerRect.left) / containerRect.width) * 100;
-
-                    if (newWidth > 10 && newWidth < 90) {
-                        leftSide.style.width = `${newWidth}%`;
-                        leftSide.style.flex = `0 0 ${newWidth}%`;
-                        // rightSide 自動填滿
-                    }
-                };
-
-                const onStop = () => {
-                    this.isResizing = false;
-                    resizer.classList.remove('dragging');
-                    document.getElementById('ide-window').style.pointerEvents = 'all'; // 恢復 iframe 互動
-                    document.querySelector('iframe').style.pointerEvents = 'all';
-                    document.removeEventListener('mousemove', onMove);
-                    document.removeEventListener('mouseup', onStop);
-                    document.removeEventListener('touchmove', onMove);
-                    document.removeEventListener('touchend', onStop);
-                };
-
-                const onStart = (e) => {
-                    this.isResizing = true;
-                    resizer.classList.add('dragging');
-                    // 拖拉時禁用 iframe 事件以防止滑鼠被吞掉
-                    document.querySelector('iframe').style.pointerEvents = 'none';
-                    
-                    document.addEventListener('mousemove', onMove);
-                    document.addEventListener('mouseup', onStop);
-                    document.addEventListener('touchmove', onMove);
-                    document.addEventListener('touchend', onStop);
-                };
-
-                resizer.addEventListener('mousedown', onStart);
-                resizer.addEventListener('touchstart', onStart);
             }
         };
 
-        // 啟動應用
         app.init();
-
     </script>
 </body>
 </html>
