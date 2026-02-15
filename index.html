@@ -5,15 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Nova OS IDE</title>
+    <title>Nova OS - Tablet IDE</title>
     
-    <!-- 1. 外部資源 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            --glass: rgba(15, 23, 42, 0.8);
+            --glass: rgba(15, 23, 42, 0.7);
             --border: rgba(255, 255, 255, 0.1);
         }
         body {
@@ -47,6 +46,12 @@
             background-size: 400% 400%;
             animation: flow 15s ease infinite;
         }
+        
+        .window-enter { animation: zoomIn 0.2s ease-out; }
+        @keyframes zoomIn {
+            from { opacity: 0; transform: scale(0.95) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
     </style>
 
     <script type="importmap">
@@ -69,15 +74,13 @@
         import { createRoot } from 'react-dom/client';
         import * as Lucide from 'lucide-react';
 
-        // --- 設定與初始化 ---
-        const STORAGE_KEY = 'nova_os_final_v1';
+        const STORAGE_KEY = 'nova_os_v3';
         const INITIAL_FILES = [
             { id: '1', name: 'index.html', type: 'html', content: '<div class="h-screen flex flex-col items-center justify-center bg-slate-950 text-white text-center p-10">\n  <h1 class="text-6xl font-black mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">Nova OS</h1>\n  <p class="text-white/40 text-xl font-medium tracking-widest uppercase">System Core Initialized</p>\n</div>' },
             { id: '2', name: 'style.css', type: 'css', content: 'body { margin: 0; background: #020617; font-family: sans-serif; }' },
-            { id: '3', name: 'main.js', type: 'js', content: 'console.log("Terminal ready. Welcome back, Engineer.");' }
+            { id: '3', name: 'main.js', type: 'js', content: 'console.log("Nova Terminal Ready.");' }
         ];
 
-        // --- 主程式組件 ---
         const App = () => {
             const [user, setUser] = useState(null);
             const [auth, setAuth] = useState({ user: '', pass: '', isReg: false });
@@ -102,6 +105,7 @@
                     const u = store[auth.user];
                     if (u && u.password === auth.pass) {
                         setUser(u);
+                        // 登入後預設開啟 IDE
                         setWindows({ ...windows, IDE: true });
                     } else alert('Access Denied: Invalid Credentials');
                 }
@@ -116,10 +120,10 @@
                 }
             };
 
-            // 1. 登入介面
+            // 登入介面
             if (!user) {
                 return React.createElement('div', { className: 'h-screen flex items-center justify-center p-6' },
-                    React.createElement('div', { className: 'w-full max-w-sm glass p-10 rounded-[2.5rem] shadow-2xl relative overflow-hidden' },
+                    React.createElement('div', { className: 'w-full max-w-sm glass p-10 rounded-[2.5rem] shadow-2xl relative' },
                         React.createElement('div', { className: 'flex flex-col items-center mb-8' },
                             React.createElement('div', { className: 'w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center mb-4 glow-blue' },
                                 React.createElement(Lucide.Cpu, { className: 'text-white', size: 32 })
@@ -129,57 +133,56 @@
                         React.createElement('form', { onSubmit: handleAuth, className: 'space-y-4' },
                             React.createElement('input', { 
                                 type: 'text', placeholder: 'Username', required: true,
-                                className: 'w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white outline-none focus:border-blue-500',
+                                className: 'w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white outline-none focus:border-blue-500 transition-all',
                                 value: auth.user, onChange: e => setAuth({...auth, user: e.target.value})
                             }),
                             React.createElement('input', { 
                                 type: 'password', placeholder: 'Password', required: true,
-                                className: 'w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white outline-none focus:border-blue-500',
+                                className: 'w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white outline-none focus:border-blue-500 transition-all',
                                 value: auth.pass, onChange: e => setAuth({...auth, pass: e.target.value})
                             }),
-                            React.createElement('button', { type: 'submit', className: 'w-full py-4 bg-blue-600 rounded-2xl font-bold hover:bg-blue-500 transition-colors' }, 
+                            React.createElement('button', { type: 'submit', className: 'w-full py-4 bg-blue-600 rounded-2xl font-bold hover:bg-blue-500 active:scale-95 transition-all' }, 
                                 auth.isReg ? 'INITIALIZE ACCOUNT' : 'SECURE LOGIN'
                             )
                         ),
                         React.createElement('button', { 
                             onClick: () => setAuth({...auth, isReg: !auth.isReg}),
                             className: 'w-full mt-6 text-white/30 text-[10px] font-bold tracking-widest'
-                        }, auth.isReg ? 'EXISTING USER? LOGIN' : 'NEW SYSTEM? REGISTER')
+                        }, auth.isReg ? 'ALREADY REGISTERED? LOGIN' : 'NEW USER? CREATE SYSTEM ID')
                     )
                 );
             }
 
-            // 2. 桌面系統
+            // 桌面系統
             return React.createElement('div', { className: 'h-screen w-screen relative overflow-hidden' },
-                // 桌面圖示
+                // 桌面背景圖示
                 React.createElement('div', { className: 'p-8 flex flex-col gap-10' },
                     React.createElement(DesktopIcon, { icon: Lucide.Code2, label: 'IDE', onClick: () => setWindows({...windows, IDE: true}) }),
                     React.createElement(DesktopIcon, { icon: Lucide.FolderOpen, label: 'FILES', onClick: () => setWindows({...windows, FILES: true}) })
                 ),
 
-                // IDE 視窗
+                // 視窗列表
                 windows.IDE && React.createElement(Window, { 
                     title: 'Nova Code Editor', 
                     onClose: () => setWindows({...windows, IDE: false}),
-                    children: React.createElement(IDEPane, { 
-                        files: user.files, 
-                        onSave: updateFiles
-                    })
+                    children: React.createElement(IDEPane, { files: user.files, onSave: updateFiles })
                 }),
 
-                // 檔案 視窗
                 windows.FILES && React.createElement(Window, { 
                     title: 'File Explorer', 
                     onClose: () => setWindows({...windows, FILES: false}),
-                    children: React.createElement('div', { className: 'p-8 grid grid-cols-2 sm:grid-cols-4 gap-6' },
-                        user.files.map(f => React.createElement('div', { key: f.id, className: 'flex flex-col items-center p-6 glass rounded-2xl hover:bg-white/10 transition-colors cursor-pointer' },
+                    children: React.createElement('div', { className: 'p-8 grid grid-cols-2 sm:grid-cols-4 gap-6 overflow-y-auto' },
+                        user.files.map(f => React.createElement('div', { 
+                            key: f.id, 
+                            className: 'flex flex-col items-center p-6 glass rounded-3xl hover:bg-white/10 active:scale-95 transition-all cursor-pointer' 
+                        },
                             React.createElement(Lucide.FileCode, { className: 'text-blue-400 mb-3', size: 40 }),
-                            React.createElement('span', { className: 'text-[10px] font-bold' }, f.name)
+                            React.createElement('span', { className: 'text-[10px] font-bold truncate w-full text-center' }, f.name)
                         ))
                     )
                 }),
 
-                // 底部任務欄
+                // 任務欄
                 React.createElement('div', { className: 'fixed bottom-4 left-1/2 -translate-x-1/2 h-16 w-[92%] max-w-2xl glass rounded-2xl px-6 flex items-center justify-between shadow-2xl z-[100]' },
                     React.createElement('div', { className: 'flex gap-4' },
                         React.createElement(TaskIcon, { active: windows.IDE, icon: Lucide.Code2, onClick: () => setWindows({...windows, IDE: !windows.IDE}) }),
@@ -190,7 +193,10 @@
                             React.createElement('div', { className: 'text-sm font-bold leading-none' }, time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })),
                             React.createElement('div', { className: 'text-[9px] text-white/30 font-bold mt-1 uppercase' }, time.toLocaleDateString([], { month: 'short', day: 'numeric' }))
                         ),
-                        React.createElement('button', { onClick: () => setUser(null), className: 'text-red-400 hover:text-red-300 transition-colors' }, React.createElement(Lucide.LogOut, { size: 20 }))
+                        React.createElement('button', { 
+                            onClick: () => setUser(null), 
+                            className: 'text-red-400 p-2 hover:bg-red-400/10 rounded-xl transition-all' 
+                        }, React.createElement(Lucide.LogOut, { size: 20 }))
                     )
                 )
             );
@@ -198,23 +204,36 @@
 
         // --- 子組件 ---
         const DesktopIcon = ({ icon, label, onClick }) => (
-            React.createElement('div', { onClick, className: 'flex flex-col items-center gap-2 w-16 cursor-pointer active:scale-90 transition-all group' },
-                React.createElement('div', { className: 'w-16 h-16 glass rounded-2xl flex items-center justify-center text-blue-400 group-hover:bg-white/10' }, React.createElement(icon, { size: 32 })),
+            React.createElement('div', { 
+                onClick, 
+                className: 'flex flex-col items-center gap-2 w-16 cursor-pointer active:scale-90 transition-all group' 
+            },
+                React.createElement('div', { className: 'w-16 h-16 glass rounded-2xl flex items-center justify-center text-blue-400 group-hover:bg-white/10 transition-colors' }, 
+                    React.createElement(icon, { size: 32 })
+                ),
                 React.createElement('span', { className: 'text-[10px] font-black bg-black/60 px-2 py-0.5 rounded-full tracking-tighter' }, label)
             )
         );
 
         const TaskIcon = ({ active, icon, onClick }) => (
-            React.createElement('button', { onClick, className: `p-3 rounded-xl transition-all ${active ? 'bg-blue-600 text-white glow-blue' : 'text-white/30 hover:bg-white/5'}` },
+            React.createElement('button', { 
+                onClick, 
+                className: `p-3 rounded-xl transition-all active:scale-90 ${active ? 'bg-blue-600 text-white shadow-lg glow-blue' : 'text-white/30 hover:bg-white/5'}` 
+            },
                 React.createElement(icon, { size: 24 })
             )
         );
 
         const Window = ({ title, onClose, children }) => (
-            React.createElement('div', { className: 'fixed inset-6 glass rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden z-50 animate-in fade-in zoom-in duration-200' },
+            React.createElement('div', { 
+                className: 'fixed inset-4 sm:inset-6 glass rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden z-50 window-enter' 
+            },
                 React.createElement('div', { className: 'h-12 border-b border-white/5 bg-white/5 flex items-center justify-between px-8 shrink-0' },
                     React.createElement('span', { className: 'text-[10px] font-black tracking-[0.2em] opacity-40 uppercase' }, title),
-                    React.createElement('button', { onClick, className: 'text-white/20 hover:text-red-400' }, React.createElement(Lucide.X, { size: 18 }))
+                    React.createElement('button', { 
+                        onClick: onClose, // 這裡原本誤寫為 onClick
+                        className: 'text-white/20 hover:text-red-400 p-2 transition-colors' 
+                    }, React.createElement(Lucide.X, { size: 18 }))
                 ),
                 React.createElement('div', { className: 'flex-1 overflow-hidden bg-[#0d1117]' }, children)
             )
@@ -229,36 +248,38 @@
                 const h = localFiles.find(f => f.type === 'html')?.content || '';
                 const c = localFiles.filter(f => f.type === 'css').map(f => f.content).join('\n');
                 const j = localFiles.filter(f => f.type === 'js').map(f => f.content).join('\n');
-                // 重要：使用 <\/script> 避免 HTML 解析器提早結束父級 script 標籤
+                // 轉義 <\/script> 防止 HTML 解析器提早中斷
                 return `<!DOCTYPE html><html><head><script src="https://cdn.tailwindcss.com"><\/script><style>${c}</style></head><body>${h}<script>${j}<\/script></body></html>`;
             }, [localFiles]);
 
             return React.createElement('div', { className: 'h-full flex flex-col' },
                 React.createElement('div', { className: 'h-12 border-b border-white/5 bg-slate-900/50 flex items-center px-4 justify-between shrink-0' },
-                    React.createElement('div', { className: 'flex gap-2 overflow-x-auto no-scrollbar' },
+                    React.createElement('div', { className: 'flex gap-2 overflow-x-auto no-scrollbar pb-1' },
                         localFiles.map(f => React.createElement('button', { 
                             key: f.id, onClick: () => setActiveId(f.id),
-                            className: `px-4 h-8 text-[10px] font-bold rounded-full transition-all ${activeId === f.id ? 'bg-blue-600 text-white' : 'text-white/20 hover:bg-white/10'}`
+                            className: `px-4 h-8 text-[10px] font-bold rounded-full transition-all whitespace-nowrap ${activeId === f.id ? 'bg-blue-600 text-white' : 'text-white/20 hover:bg-white/10'}`
                         }, f.name))
                     ),
-                    React.createElement('button', { onClick: () => onSave(localFiles), className: 'px-4 py-1.5 bg-blue-600/20 text-blue-400 border border-blue-400/30 rounded-full text-[10px] font-black tracking-widest hover:bg-blue-600/40 transition-all' }, 'SAVE PROJECT')
+                    React.createElement('button', { 
+                        onClick: () => onSave(localFiles), 
+                        className: 'px-4 py-1.5 bg-blue-600 text-white rounded-full text-[10px] font-black tracking-widest hover:bg-blue-500 active:scale-95 transition-all' 
+                    }, 'SAVE')
                 ),
-                React.createElement('div', { className: 'flex-1 flex overflow-hidden' },
+                React.createElement('div', { className: 'flex-1 flex flex-col sm:flex-row overflow-hidden' },
                     React.createElement('textarea', { 
                         value: active.content, 
                         onChange: e => setLocalFiles(prev => prev.map(f => f.id === activeId ? {...f, content: e.target.value} : f)),
-                        className: 'w-1/2 h-full bg-transparent p-6 text-blue-100/70 code-font outline-none resize-none text-sm border-r border-white/5',
+                        className: 'w-full sm:w-1/2 h-1/2 sm:h-full bg-transparent p-6 text-blue-100/70 code-font outline-none resize-none text-sm border-b sm:border-b-0 sm:border-r border-white/5',
                         spellCheck: false,
                         autoFocus: true
                     }),
-                    React.createElement('div', { className: 'w-1/2 h-full bg-white relative' },
+                    React.createElement('div', { className: 'w-full sm:w-1/2 h-1/2 sm:h-full bg-white relative' },
                         React.createElement('iframe', { srcDoc, className: 'w-full h-full border-none' })
                     )
                 )
             );
         };
 
-        // --- 啟動節點 ---
         const root = createRoot(document.getElementById('root'));
         root.render(React.createElement(App));
     </script>
